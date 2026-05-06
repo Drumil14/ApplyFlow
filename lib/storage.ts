@@ -11,6 +11,7 @@ type Database = {
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "db.json");
 const blobKey = "database";
+let fallbackDatabase: Database | null = null;
 
 const seedEvents: ReplayEvent[] = [
   { id: "evt_seed_1", type: "mousemove", x: 98, y: 122, value: null, timestamp: 0, sessionId: "session_seed_alpha", targetId: null, scrollY: null },
@@ -37,13 +38,20 @@ const seed: Database = {
 
 export async function readDatabase(): Promise<Database> {
   if (process.env.NETLIFY) {
-    const store = getStore("ui-replay");
-    const database = await store.get(blobKey, { type: "json" });
-    if (database) {
-      return database as Database;
+    try {
+      const store = getStore("ui-replay");
+      const database = await store.get(blobKey, { type: "json" });
+      if (database) {
+        fallbackDatabase = database as Database;
+        return fallbackDatabase;
+      }
+      await store.setJSON(blobKey, seed);
+      fallbackDatabase = seed;
+      return seed;
+    } catch {
+      fallbackDatabase = fallbackDatabase ?? seed;
+      return fallbackDatabase;
     }
-    await store.setJSON(blobKey, seed);
-    return seed;
   }
 
   await fs.mkdir(dataDir, { recursive: true });
@@ -58,8 +66,11 @@ export async function readDatabase(): Promise<Database> {
 
 export async function writeDatabase(database: Database) {
   if (process.env.NETLIFY) {
-    const store = getStore("ui-replay");
-    await store.setJSON(blobKey, database);
+    fallbackDatabase = database;
+    try {
+      const store = getStore("ui-replay");
+      await store.setJSON(blobKey, database);
+    } catch {}
     return;
   }
 

@@ -86,7 +86,7 @@ export function useRecorder(onSaved: (id: string) => void) {
       body: JSON.stringify({ events: eventsRef.current })
     });
     if (!response.ok) {
-      throw new Error("Unable to save session");
+      return;
     }
     const data = (await response.json()) as { session: { id: string } };
     reset();

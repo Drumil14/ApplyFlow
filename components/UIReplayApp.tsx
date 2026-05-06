@@ -14,6 +14,11 @@ export function UIReplayApp() {
 
   const loadSessions = useCallback(async (preferredId?: string) => {
     const response = await fetch("/api/sessions", { cache: "no-store" });
+    if (!response.ok) {
+      setSessions([]);
+      setActiveId(null);
+      return null;
+    }
     const data = (await response.json()) as { sessions: ReplaySession[] };
     setSessions(data.sessions);
     const nextId = preferredId ?? activeId ?? data.sessions[0]?.id ?? null;
