@@ -10,7 +10,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.7.4",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

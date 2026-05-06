@@ -1,6 +1,5 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { getStore } from "@netlify/blobs";
 import type { ReplayEvent, ReplaySession, SessionDetail } from "./types";
 
 type Database = {
@@ -10,7 +9,6 @@ type Database = {
 
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "db.json");
-const blobKey = "database";
 let fallbackDatabase: Database | null = null;
 
 const seedEvents: ReplayEvent[] = [
@@ -38,20 +36,8 @@ const seed: Database = {
 
 export async function readDatabase(): Promise<Database> {
   if (process.env.NETLIFY) {
-    try {
-      const store = getStore("ui-replay");
-      const database = await store.get(blobKey, { type: "json" });
-      if (database) {
-        fallbackDatabase = database as Database;
-        return fallbackDatabase;
-      }
-      await store.setJSON(blobKey, seed);
-      fallbackDatabase = seed;
-      return seed;
-    } catch {
-      fallbackDatabase = fallbackDatabase ?? seed;
-      return fallbackDatabase;
-    }
+    fallbackDatabase = fallbackDatabase ?? seed;
+    return fallbackDatabase;
   }
 
   await fs.mkdir(dataDir, { recursive: true });
@@ -67,10 +53,6 @@ export async function readDatabase(): Promise<Database> {
 export async function writeDatabase(database: Database) {
   if (process.env.NETLIFY) {
     fallbackDatabase = database;
-    try {
-      const store = getStore("ui-replay");
-      await store.setJSON(blobKey, database);
-    } catch {}
     return;
   }
 

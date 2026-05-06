@@ -121,7 +121,7 @@ data/db.json
 
 The file is generated automatically when the app first reads or writes session data. It is ignored by Git so local recordings do not pollute the repository.
 
-On Netlify, the app uses Netlify Blobs instead of local file writes. This keeps replay sessions persistent in production while preserving the simple JSON workflow during local development.
+On Netlify, the demo falls back to serverless in-memory storage so API routes do not rely on a writable filesystem. Local development uses the JSON file workflow.
 
 ## Netlify Deployment
 
@@ -134,7 +134,7 @@ Build command: npm run build
 Publish directory: .next
 ```
 
-The API routes are handled by Netlify's automatic Next.js adapter. Production session storage uses Netlify Blobs.
+The API routes are handled by Netlify's automatic Next.js adapter.
 
 ## Notes
 
