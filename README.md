@@ -125,7 +125,7 @@ On Netlify, the app uses Netlify Blobs instead of local file writes. This keeps 
 
 ## Netlify Deployment
 
-The project includes `netlify.toml` with the official Next.js runtime plugin.
+The project includes `netlify.toml` with the standard Next.js build settings. Netlify automatically applies its current OpenNext adapter during deployment.
 
 Use these settings on Netlify:
 
@@ -134,7 +134,7 @@ Build command: npm run build
 Publish directory: .next
 ```
 
-The API routes and session storage require the Netlify Next.js plugin and Netlify Blobs package included in this project.
+The API routes are handled by Netlify's automatic Next.js adapter. Production session storage uses Netlify Blobs.
 
 ## Notes
 
