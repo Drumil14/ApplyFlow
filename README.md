@@ -121,7 +121,21 @@ data/db.json
 
 The file is generated automatically when the app first reads or writes session data. It is ignored by Git so local recordings do not pollute the repository.
 
+On Netlify, the app uses Netlify Blobs instead of local file writes. This keeps replay sessions persistent in production while preserving the simple JSON workflow during local development.
+
+## Netlify Deployment
+
+The project includes `netlify.toml` with the official Next.js runtime plugin.
+
+Use these settings on Netlify:
+
+```text
+Build command: npm run build
+Publish directory: .next
+```
+
+The API routes and session storage require the Netlify Next.js plugin and Netlify Blobs package included in this project.
+
 ## Notes
 
 This project intentionally avoids heavy analytics, replay, or animation libraries. The recording and playback logic is implemented with React state, browser event handlers, requestAnimationFrame, and simple API persistence.
-

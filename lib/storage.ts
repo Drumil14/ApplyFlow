@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { getStore } from "@netlify/blobs";
 import type { ReplayEvent, ReplaySession, SessionDetail } from "./types";
 
 type Database = {
@@ -9,6 +10,7 @@ type Database = {
 
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "db.json");
+const blobKey = "database";
 
 const seedEvents: ReplayEvent[] = [
   { id: "evt_seed_1", type: "mousemove", x: 98, y: 122, value: null, timestamp: 0, sessionId: "session_seed_alpha", targetId: null, scrollY: null },
@@ -34,6 +36,16 @@ const seed: Database = {
 };
 
 export async function readDatabase(): Promise<Database> {
+  if (process.env.NETLIFY) {
+    const store = getStore("ui-replay");
+    const database = await store.get(blobKey, { type: "json" });
+    if (database) {
+      return database as Database;
+    }
+    await store.setJSON(blobKey, seed);
+    return seed;
+  }
+
   await fs.mkdir(dataDir, { recursive: true });
   try {
     const raw = await fs.readFile(dataFile, "utf8");
@@ -45,6 +57,12 @@ export async function readDatabase(): Promise<Database> {
 }
 
 export async function writeDatabase(database: Database) {
+  if (process.env.NETLIFY) {
+    const store = getStore("ui-replay");
+    await store.setJSON(blobKey, database);
+    return;
+  }
+
   await fs.mkdir(dataDir, { recursive: true });
   await fs.writeFile(dataFile, JSON.stringify(database, null, 2));
 }
