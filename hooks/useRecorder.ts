@@ -88,7 +88,11 @@ export function useRecorder(onSaved: (id: string) => void) {
     if (!response.ok) {
       return;
     }
-    const data = (await response.json()) as { session: { id: string } };
+    const data = (await response.json()) as { session?: { id?: string } };
+    if (!data.session?.id) {
+      reset();
+      return;
+    }
     reset();
     onSaved(data.session.id);
   }, [onSaved, reset]);
