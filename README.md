@@ -1,141 +1,119 @@
-# UI Replay
+# ApplyFlow
 
-UI Replay is a full-stack developer tool for recording user interactions on a webpage and replaying them with visual fidelity. It captures pointer movement, clicks, scrolling, and input changes into timestamped sessions, then replays those sessions with a custom cursor, smooth timeline controls, click effects, target highlighting, and behavioral insights.
+ApplyFlow is a production-quality full-stack job application tracker for students and software engineers. It combines application management, Kanban pipeline tracking, resume version performance, activity timelines, and AI job description analysis in a polished SaaS-style experience.
 
-The app is built as a polished portfolio product rather than a minimal demo. It uses Next.js App Router, React, Tailwind CSS, Next.js API routes, and lightweight JSON file storage.
+## Stack
+
+- Next.js App Router, React, TypeScript
+- Tailwind CSS, Framer Motion, lucide-react, Recharts, Sonner
+- Prisma with PostgreSQL
+- NextAuth credentials authentication
+- OpenAI API with a deterministic local fallback
+- Zustand for the command menu state
 
 ## Features
 
-- Records mouse movement with throttling for performance
-- Captures clicks, scroll positions, and input changes
-- Stores events in sessions with unique IDs and timestamps
-- Saves and fetches sessions through Next.js API routes
-- Replays sessions with smooth cursor interpolation
-- Shows click pulse effects and interacted-element highlights
-- Replays input typing visually
-- Supports play, pause, restart, timeline scrubbing, and 1x or 2x playback speed
-- Displays session metadata including duration and event count
-- Generates insights for clicked areas, repeated clicks, idle time, interaction density, viewport bias, and input activity
-- Uses a dark, modern developer-tool interface
-- Runs locally with JSON-backed storage and no heavy external libraries
-
-## Tech Stack
-
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- Next.js API routes
-- JSON file storage
+- Premium landing page with responsive SaaS sections, pricing, testimonials, and CTA
+- Email/password sign up and login with persistent NextAuth sessions
+- One-click demo login that auto-provisions a seeded workspace
+- Protected dashboard and user-scoped data
+- Overview statistics, weekly activity chart, interview/deadline cards, rejection and offer analytics
+- CRUD job applications with notes, links, salary range, deadlines, recruiter details, and resume association
+- Drag-and-drop Kanban board for Applied, OA, Interview, Final Round, Offer, and Rejected
+- AI job description analyzer for skills, technologies, seniority, keywords, resume suggestions, and match score
+- Resume version tracking with conversion metrics and associated applications
+- Activity timeline, command menu, dark/light mode, toast notifications, skeleton states, empty states, and mobile responsive layouts
 
 ## Getting Started
 
-Install dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-Start the development server:
+2. Copy the environment template:
+
+```bash
+cp .env.example .env
+```
+
+3. Set `DATABASE_URL` to a PostgreSQL database and create a strong `NEXTAUTH_SECRET`.
+
+4. Generate Prisma and run the migration:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+5. Seed believable demo data:
+
+```bash
+npm run db:seed
+```
+
+6. Start the app:
 
 ```bash
 npm run dev
 ```
 
-Open the app:
+Demo login:
 
-```text
-http://localhost:3000
-```
+- Email: `demo@applyflow.dev`
+- Password: `applyflow123`
 
-Build for production:
+The landing page "Try Live Demo" button routes to `/login?demo=true`, fills the demo credentials, and signs in automatically.
+The demo workspace is generated server-side from `lib/demo.ts` and refreshes from seed data after several hours or whenever its application set is empty. No environment variables or private server configuration are sent to the browser.
+
+## AI Analyzer
+
+Set `OPENAI_API_KEY` to enable live OpenAI analysis. Without a key, ApplyFlow returns a deterministic local analysis so the UI and workflow still work in development and preview environments.
+
+## Vercel Deployment
+
+1. Create a Vercel project from this repository.
+2. Add a managed PostgreSQL database, such as Vercel Postgres, Neon, Supabase, or Railway.
+3. Add these environment variables in Vercel:
+
+- `DATABASE_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+
+4. Run Prisma migrations against production:
 
 ```bash
-npm run build
+npx prisma migrate deploy
 ```
+
+The included `vercel.json` uses `npm run build`, which runs `prisma generate` before `next build`.
 
 ## Project Structure
 
 ```text
 app/
-  api/
-    sessions/
-      [id]/
-        route.ts
-      route.ts
-  globals.css
-  layout.tsx
-  page.tsx
-
+  (auth)/            login and signup routes
+  api/               auth, applications, resumes, activity, and AI route handlers
+  dashboard/         protected application routes
 components/
-  CaptureSurface.tsx
-  InsightsPanel.tsx
-  PlaybackControls.tsx
-  RecorderPanel.tsx
-  ReplayPanel.tsx
-  SessionSidebar.tsx
-  StatPill.tsx
-  UIReplayApp.tsx
-
-hooks/
-  useRecorder.ts
-  useReplay.ts
-
-lib/
-  ids.ts
-  insights.ts
-  storage.ts
-  time.ts
-  types.ts
+  app/               dashboard shell, command menu, theme toggle
+  auth/              authentication UI
+  dashboard/         product workspaces
+  landing/           public marketing site
+  providers/         session and toast providers
+  ui/                reusable primitives
+lib/                 auth, prisma, session helpers, serializers, utilities
+prisma/              schema and seed data
+stores/              Zustand state
+types/               shared product types
 ```
 
-## How It Works
+## Quality Checks
 
-The recorder attaches interaction handlers to an embedded product surface. While recording, it collects normalized events with timestamps relative to the start of the session. Mouse movement is throttled so the replay remains smooth without flooding storage.
-
-Saved sessions are posted to `/api/sessions`, where they are persisted in `data/db.json`. The replay view fetches stored sessions, reconstructs state at the current timeline position, interpolates cursor movement between pointer events, updates scroll position smoothly, restores input values, and highlights recently interacted targets.
-
-The insights engine analyzes the event stream and surfaces practical signals such as repeated clicks, interaction density, idle time before the first meaningful action, and which part of the interface received the most attention.
-
-## API Routes
-
-### `GET /api/sessions`
-
-Returns all saved sessions with metadata.
-
-### `POST /api/sessions`
-
-Creates a new session from a list of recorded events.
-
-### `GET /api/sessions/:id`
-
-Returns a single session with all replay events.
-
-## Storage
-
-UI Replay uses a lightweight JSON database stored at:
-
-```text
-data/db.json
+```bash
+npm run typecheck
+npm run build
 ```
-
-The file is generated automatically when the app first reads or writes session data. It is ignored by Git so local recordings do not pollute the repository.
-
-On Netlify, the demo falls back to serverless in-memory storage so API routes do not rely on a writable filesystem. Local development uses the JSON file workflow.
-
-## Netlify Deployment
-
-The project includes `netlify.toml` with the standard Next.js build settings. Netlify automatically applies its current OpenNext adapter during deployment.
-
-Use these settings on Netlify:
-
-```text
-Build command: npm run build
-Publish directory: .next
-```
-
-The API routes are handled by Netlify's automatic Next.js adapter.
-
-## Notes
-
-This project intentionally avoids heavy analytics, replay, or animation libraries. The recording and playback logic is implemented with React state, browser event handlers, requestAnimationFrame, and simple API persistence.

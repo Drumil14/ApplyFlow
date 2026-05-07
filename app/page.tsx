@@ -1,5 +1,5 @@
-import { UIReplayApp } from "@/components/UIReplayApp";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function Home() {
-  return <UIReplayApp />;
+  return <LandingPage />;
 }
