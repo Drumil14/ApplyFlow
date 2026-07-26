@@ -1,238 +1,101 @@
 # ApplyFlow
 
-ApplyFlow is a modern AI-powered job application operating system built for students and software engineers. It helps users manage applications, track interviews, analyze resumes against job descriptions, and organize the entire job search process through a polished SaaS-style interface.
+A job application tracker. Keep applications organized on a Kanban board, track
+resume versions, and score how well a resume matches a job description.
 
-The product combines Kanban pipeline management, AI-powered job analysis, resume performance tracking, analytics dashboards, and activity timelines into one seamless workflow.
+## Tech stack
 
----
-
-## Tech Stack
-
-- Next.js App Router
-- React
-- TypeScript
+- Next.js (App Router) + React + TypeScript
 - Tailwind CSS
-- Framer Motion
-- Prisma ORM
-- PostgreSQL
-- NextAuth Authentication
-- OpenAI API
-- Zustand
-- Recharts
-- Sonner
-
----
+- Prisma + PostgreSQL
+- NextAuth (email/password)
+- Zustand, Recharts, Framer Motion
+- Vitest for tests
 
 ## Features
 
-### Authentication
+- Kanban board for applications across Applied, OA, Interview, Final Round, Offer, and Rejected
+- Application details: statuses, recruiter notes, links, salary ranges, deadlines
+- Resume versions, each tied to the applications it was used for
+- Match analyzer: paste a job description, pick a resume version, and get a match
+  score plus matched/missing skills. Matching is done locally with a skills
+  dictionary — no external API or LLM.
+- Dashboard with activity and outcome charts
+- Dark/light themes, command palette, keyboard shortcuts
 
-- Secure email/password authentication
-- Persistent sessions with NextAuth
-- Protected dashboard routes
-- One-click demo login experience
-
-### Dashboard
-
-- Application analytics and overview cards
-- Weekly activity insights
-- Offer and rejection tracking
-- Upcoming interview and deadline cards
-- Interactive charts and visualizations
-
-### Job Application Management
-
-- Create, edit, and delete applications
-- Track statuses across hiring stages
-- Add recruiter notes and external links
-- Store salary ranges and deadlines
-- Associate resume versions with applications
-
-### Kanban Pipeline
-
-- Drag-and-drop workflow management
-- Smooth realtime UI interactions
-- Application tracking across:
-  - Applied
-  - Online Assessment
-  - Interview
-  - Final Round
-  - Offer
-  - Rejected
-
-### AI Job Description Analyzer
-
-Paste a job description to generate:
-
-- Required skills
-- Technologies
-- Seniority level detection
-- ATS keywords
-- Resume improvement suggestions
-- Match score analysis
-
-### Resume Tracking
-
-- Upload and manage resume versions
-- Compare resume performance
-- Track conversion rates by resume
-
-### UX and Product Features
-
-- Responsive mobile-first layouts
-- Dark and light mode
-- Command palette
-- Loading skeletons
-- Toast notifications
-- Empty states
-- Smooth animations and microinteractions
-- Premium SaaS-inspired UI
-
----
-
-## Demo Access
-
-The landing page includes a “Try Live Demo” experience.
-
-Demo credentials:
-
-Email: `demo@applyflow.dev`
-Password: `applyflow123`
-
-The demo workspace automatically provisions seeded application data for first-time visitors.
-
----
-
-## Getting Started
-
-### 1. Install Dependencies
+## Getting started
 
 ```bash
 npm install
-```
-
-### 2. Create Environment File
-
-```bash
 cp .env.example .env
 ```
 
-### 3. Configure Environment Variables
+Set the values in `.env`:
 
 ```env
 DATABASE_URL=
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=
-OPENAI_API_KEY=
-OPENAI_MODEL=
 ```
 
-### 4. Generate Prisma Client
+Then set up the database and run the app:
 
 ```bash
 npm run prisma:generate
-```
-
-### 5. Run Database Migrations
-
-```bash
 npm run prisma:migrate
-```
-
-### 6. Seed Demo Data
-
-```bash
-npm run db:seed
-```
-
-### 7. Start Development Server
-
-```bash
+npm run db:seed        # optional: seeds the demo workspace
 npm run dev
 ```
 
-Visit:
+Open http://localhost:3000.
 
-```text
-http://localhost:3000
+## Demo login
+
+- Email: `demo@applyflow.dev`
+- Password: `applyflow123`
+
+The demo workspace seeds sample applications, resumes, and activity.
+
+## Scripts
+
+```bash
+npm run dev         # start the dev server
+npm run build       # production build
+npm run typecheck   # tsc --noEmit
+npm test            # run the vitest suite
+npm run lint        # eslint
 ```
 
----
+## How the match score works
 
-## AI Support
+Resume text is stored per version and reduced to a normalized list of skills at
+upload time (`lib/skills.ts`). When you analyze a job description, its skills are
+extracted the same way and compared against the resume's skills
+(`lib/scoring.ts`):
 
-ApplyFlow supports OpenAI-powered job analysis.
+```
+score = round(100 * matched / total job-description skills)
+```
 
-If `OPENAI_API_KEY` is not configured, the application automatically falls back to deterministic local analysis so the UI and workflows continue functioning in development and preview environments.
+Both files are pure and covered by tests in `tests/`.
 
----
+## Deployment (Vercel)
 
-## Deployment
-
-### Deploy on Vercel
-
-1. Create a new Vercel project
-
-2. Connect the GitHub repository
-
-3. Add environment variables:
-   - DATABASE_URL
-   - NEXTAUTH_URL
-   - NEXTAUTH_SECRET
-   - OPENAI_API_KEY
-   - OPENAI_MODEL
-
-4. Run production migrations:
+1. Connect the repository to a Vercel project.
+2. Add `DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET`.
+3. Apply migrations against the production database:
 
 ```bash
 npx prisma migrate deploy
 ```
 
----
+## Project structure
 
-## Project Structure
-
-```text
-app/
-  (auth)/
-  api/
-  dashboard/
-
-components/
-  app/
-  auth/
-  dashboard/
-  landing/
-  providers/
-  ui/
-
-lib/
-prisma/
-stores/
-types/
 ```
-
----
-
-## Quality Checks
-
-```bash
-npm run typecheck
-npm run build
+app/          routes, API handlers, dashboard pages
+components/   UI and feature components
+lib/          scoring, skills, auth, prisma helpers
+prisma/       schema, migrations, seed
+tests/        unit tests
+types/        shared types
 ```
-
----
-
-## Design Goals
-
-ApplyFlow was built to simulate a modern production-ready SaaS product with strong emphasis on:
-
-- UI/UX quality
-- Product thinking
-- Smooth interactions
-- Responsive layouts
-- Visual consistency
-- Realistic workflows
-- Frontend architecture
-
-The design direction is inspired by products like Linear, Notion, and Vercel.
