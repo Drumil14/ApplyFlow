@@ -113,6 +113,8 @@ model ResumeVersion {
   fileName     String
   fileUrl      String?
   targetRole   String?
+  contentText  String?       @db.Text
+  skills       String[]      @default([])
   score        Float         @default(0)
   interviews   Int           @default(0)
   offers       Int           @default(0)

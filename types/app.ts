@@ -17,6 +17,8 @@ export type Resume = {
   versionTag: string;
   fileName: string;
   targetRole: string | null;
+  contentText?: string | null;
+  skills?: string[];
   score: number;
   interviews: number;
   offers: number;
@@ -71,4 +73,6 @@ export type AnalysisResult = {
   keywords: string[];
   resumeSuggestions: string[];
   matchScore: number;
+  matched: string[];
+  missing: string[];
 };

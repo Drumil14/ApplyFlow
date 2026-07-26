@@ -7,6 +7,7 @@ import { BarChart3, Brain, Briefcase, Columns3, FileText, Info, LogOut, Search }
 import type { ReactNode } from "react";
 import { CommandMenu } from "@/components/app/CommandMenu";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { ApplyFlowMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { cn, initials } from "@/lib/utils";
 import { useCommandStore } from "@/stores/useCommandStore";
@@ -35,8 +36,8 @@ export function DashboardShell({
       <CommandMenu />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-white/10 bg-[#080b12]/90 px-3 py-4 backdrop-blur-xl light:border-slate-200 light:bg-white/90 lg:block">
         <Link href="/dashboard" className="mb-7 flex items-center gap-3 px-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-black text-ink shadow-glow light:bg-slate-950 light:text-white">
-            AF
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-ink shadow-glow light:bg-slate-950 light:text-white">
+            <ApplyFlowMark className="h-5 w-5" />
           </div>
           <div>
             <div className="text-sm font-semibold tracking-wide">ApplyFlow</div>
@@ -87,8 +88,8 @@ export function DashboardShell({
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/10 bg-ink/75 px-4 backdrop-blur-xl light:border-slate-200 light:bg-slate-50/80 sm:px-6">
           <div className="flex items-center gap-3 lg:hidden">
-            <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-black text-ink light:bg-slate-950 light:text-white">
-              AF
+            <Link href="/dashboard" aria-label="ApplyFlow" className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-ink light:bg-slate-950 light:text-white">
+              <ApplyFlowMark className="h-5 w-5" />
             </Link>
           </div>
           <button

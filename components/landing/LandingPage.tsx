@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Brain, Check, Columns3, FileText, PlayCircle, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
+import { ApplyFlowMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 
 const features = [
@@ -29,8 +30,8 @@ export function LandingPage() {
         />
         <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-black text-ink shadow-glow light:bg-slate-950 light:text-white">
-              AF
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-ink shadow-glow light:bg-slate-950 light:text-white">
+              <ApplyFlowMark className="h-5 w-5" />
             </div>
             <span className="text-sm font-semibold">ApplyFlow</span>
           </Link>

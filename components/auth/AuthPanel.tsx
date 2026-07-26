@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ApplyFlowMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -94,8 +95,8 @@ export function AuthPanel({ mode }: { mode: "login" | "signup" }) {
   return (
     <div className="min-h-screen bg-ink px-4 py-8 text-white light:bg-slate-50 light:text-slate-950">
       <Link href="/" className="mx-auto flex max-w-6xl items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-black text-ink light:bg-slate-950 light:text-white">
-          AF
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-ink light:bg-slate-950 light:text-white">
+          <ApplyFlowMark className="h-5 w-5" />
         </div>
         <span className="text-sm font-semibold">ApplyFlow</span>
       </Link>

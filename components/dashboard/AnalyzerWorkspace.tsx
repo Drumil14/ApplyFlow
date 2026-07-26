@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, Brain, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, FileText, Loader2, ScanSearch, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -14,10 +13,18 @@ import type { AnalysisResult } from "@/types/app";
 const sample =
   "About the role: As a Product Engineer on our Growth Platform team, you will build polished React and TypeScript surfaces used by thousands of teams, own API integrations in Node.js, and partner closely with design, data, and product. You will improve activation funnels, ship accessible UI, instrument experiments, and work with PostgreSQL, observability tooling, feature flags, and modern CI/CD. Strong candidates have shipped full-stack projects, can explain product tradeoffs, and write clearly about impact.";
 
-export function AnalyzerWorkspace() {
+type ResumeOption = {
+  id: string;
+  title: string;
+  versionTag: string;
+  skills: string[];
+};
+
+export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
+  const [resumeId, setResumeId] = useState(resumes[0]?.id ?? "");
   const [error, setError] = useState("");
 
   const analyze = async (event: FormEvent<HTMLFormElement>) => {
@@ -28,7 +35,7 @@ export function AnalyzerWorkspace() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description })
+        body: JSON.stringify({ resumeId, jobDescription: description })
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.message ?? "Analysis failed.");
@@ -47,14 +54,42 @@ export function AnalyzerWorkspace() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-medium text-brand">AI analyzer</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Decode a job description</h1>
-        <p className="mt-2 text-sm text-slate-400 light:text-slate-600">Extract hiring signals and turn them into focused resume edits.</p>
+        <p className="text-sm font-medium text-brand">Match analyzer</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Score a role against your resume</h1>
+        <p className="mt-2 text-sm text-slate-400 light:text-slate-600">
+          Local, deterministic skill matching — no external services. Pick a resume version and paste a job description.
+        </p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="p-5">
           <form onSubmit={analyze}>
+            <div className="mb-3">
+              <label htmlFor="resumeId" className="mb-2 block text-sm font-medium">
+                Resume version
+              </label>
+              {resumes.length ? (
+                <select
+                  id="resumeId"
+                  name="resumeId"
+                  value={resumeId}
+                  onChange={(event) => setResumeId(event.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-white/[0.045] px-3 py-2.5 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-brand/60 light:border-slate-200 light:bg-white light:text-slate-950"
+                >
+                  {resumes.map((resume) => (
+                    <option key={resume.id} value={resume.id}>
+                      {resume.title} · {resume.versionTag} ({resume.skills.length} skills)
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2 rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">
+                  <FileText className="h-4 w-4 shrink-0" />
+                  Add a resume version (with pasted text) first so it has skills to match against.
+                </div>
+              )}
+            </div>
+
             <div className="mb-3 flex items-center justify-between">
               <label htmlFor="description" className="text-sm font-medium">Job description</label>
               <button
@@ -68,14 +103,18 @@ export function AnalyzerWorkspace() {
             <Textarea
               id="description"
               name="description"
-              className="min-h-[28rem]"
+              className="min-h-[24rem]"
               placeholder="Paste the full job description here..."
               required
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
-            <Button className="mt-4 w-full" disabled={loading} icon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}>
-              Analyze role
+            <Button
+              className="mt-4 w-full"
+              disabled={loading || !resumes.length}
+              icon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
+            >
+              Analyze match
             </Button>
           </form>
         </Card>
@@ -103,36 +142,53 @@ export function AnalyzerWorkspace() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Role match</h2>
-                  <p className="mt-1 text-sm text-slate-500">{result.seniorityLevel} signal</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {result.matched.length} of {result.requiredSkills.length} required skills present · {result.seniorityLevel} signal
+                  </p>
                 </div>
                 <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-brand/25 bg-brand/10">
                   <span className="text-3xl font-semibold text-brand">{result.matchScore}</span>
                   <span className="mt-7 text-xs text-brand">%</span>
                 </div>
               </div>
-              <Section title="Required skills" items={result.requiredSkills} />
-              <Section title="Technologies" items={result.technologies} />
-              <Section title="Keywords" items={result.keywords} />
-              <div>
-                <h3 className="mb-3 text-sm font-medium">Resume suggestions</h3>
-                <div className="space-y-3">
-                  {result.resumeSuggestions.map((suggestion) => (
-                    <div key={suggestion} className="flex gap-3 rounded-md border border-white/10 bg-white/[0.035] p-3 text-sm leading-6 text-slate-300 light:border-slate-200 light:bg-slate-50 light:text-slate-700">
-                      <Sparkles className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                      {suggestion}
-                    </div>
-                  ))}
+
+              <SkillList
+                title="Matched"
+                items={result.matched}
+                tone="matched"
+                empty="No overlap yet — this resume version shares none of the job's skills."
+              />
+              <SkillList
+                title="Missing"
+                items={result.missing}
+                tone="missing"
+                empty="Nothing missing — this resume covers every skill in the job description."
+              />
+
+              {result.resumeSuggestions.length ? (
+                <div>
+                  <h3 className="mb-3 text-sm font-medium">Resume suggestions</h3>
+                  <div className="space-y-2">
+                    {result.resumeSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion}
+                        className="rounded-md border border-white/10 bg-white/[0.035] p-3 text-sm leading-6 text-slate-300 light:border-slate-200 light:bg-slate-50 light:text-slate-700"
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </motion.div>
           ) : (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
               <div className="rounded-full border border-white/10 bg-white/[0.06] p-4 text-brand light:border-slate-200 light:bg-slate-50">
-                <Brain className="h-6 w-6" />
+                <ScanSearch className="h-6 w-6" />
               </div>
               <h2 className="mt-5 text-lg font-semibold">Ready when you paste a role</h2>
               <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                ApplyFlow will return structured skills, technologies, keywords, seniority, and resume changes.
+                ApplyFlow compares the job&apos;s skills against your selected resume version and shows exactly what matches and what&apos;s missing.
               </p>
             </div>
           )}
@@ -142,15 +198,43 @@ export function AnalyzerWorkspace() {
   );
 }
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function SkillList({
+  title,
+  items,
+  tone,
+  empty
+}: {
+  title: string;
+  items: string[];
+  tone: "matched" | "missing";
+  empty: string;
+}) {
+  const matched = tone === "matched";
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <Badge key={item}>{item}</Badge>
-        ))}
-      </div>
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
+        <span className={matched ? "text-emerald-400 light:text-emerald-600" : "text-rose"}>{title}</span>
+        <span className="text-xs text-slate-500">({items.length})</span>
+      </h3>
+      {items.length ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <span
+              key={item}
+              className={
+                matched
+                  ? "inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-300 light:border-emerald-300 light:bg-emerald-50 light:text-emerald-700"
+                  : "inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-3 py-1 text-sm text-rose"
+              }
+            >
+              {matched ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">{empty}</p>
+      )}
     </div>
   );
 }

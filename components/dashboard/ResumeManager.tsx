@@ -8,7 +8,7 @@ import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import type { Resume } from "@/types/app";
 
 export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) {
@@ -29,7 +29,8 @@ export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) 
           title: form.get("title"),
           versionTag: form.get("versionTag"),
           fileName: form.get("fileName"),
-          targetRole: form.get("targetRole")
+          targetRole: form.get("targetRole"),
+          contentText: form.get("contentText")
         })
       });
       const data = await response.json().catch(() => null);
@@ -61,6 +62,11 @@ export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) 
             <label className="block text-sm">Version tag<Input className="mt-2" name="versionTag" placeholder="v3" required /></label>
             <label className="block text-sm">File name<Input className="mt-2" name="fileName" placeholder="resume-backend-v3.pdf" required /></label>
             <label className="block text-sm">Target role<Input className="mt-2" name="targetRole" placeholder="Backend Engineer" /></label>
+            <label className="block text-sm">
+              Resume text
+              <Textarea className="mt-2 min-h-[10rem]" name="contentText" placeholder="Paste your resume text here so ApplyFlow can extract its skills for match scoring..." />
+              <span className="mt-1 block text-xs text-slate-500">Used once at upload to detect skills. No files leave your browser session.</span>
+            </label>
             <Button className="w-full" disabled={loading} icon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}>Add resume</Button>
           </form>
           {best ? (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { extractSkills } from "@/lib/skills";
 
 export async function GET() {
   const { userId, response } = await requireUser();
@@ -27,6 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Resume title and file name are required." }, { status: 400 });
   }
 
+  // Ingest pasted resume text once, at upload time: store it and extract skills.
+  const contentText = String(body.contentText ?? "").trim();
+  const skills = extractSkills(contentText);
+
   const resume = await prisma.resumeVersion.create({
     data: {
       title,
@@ -34,6 +39,8 @@ export async function POST(request: Request) {
       versionTag: String(body.versionTag ?? "v1"),
       fileUrl: body.fileUrl ? String(body.fileUrl) : null,
       targetRole: body.targetRole ? String(body.targetRole) : null,
+      contentText: contentText || null,
+      skills,
       score: body.score ? Number(body.score) : 0,
       userId: userId as string
     }

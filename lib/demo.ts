@@ -1,5 +1,6 @@
 import { ApplicationStatus, type PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { extractSkills } from "@/lib/skills";
 
 export const DEMO_EMAIL = "demo@applyflow.dev";
 export const DEMO_PASSWORD = "applyflow123";
@@ -52,6 +53,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
   await prisma.application.deleteMany({ where: { userId: user.id } });
   await prisma.resumeVersion.deleteMany({ where: { userId: user.id } });
 
+  const systemsResumeText =
+    "Backend engineer focused on distributed systems. Built payment and ledger services in Node.js and TypeScript backed by PostgreSQL and Redis. Shipped event pipelines on Kafka, containerized workloads with Docker and Kubernetes, and ran deployments on AWS with CI/CD. Strong SQL and API design.";
   const systemsResume = await prisma.resumeVersion.create({
     data: {
       userId: user.id,
@@ -59,6 +62,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
       versionTag: "v4",
       fileName: "maya-chen-backend-v4.pdf",
       targetRole: "Backend Software Engineer",
+      contentText: systemsResumeText,
+      skills: extractSkills(systemsResumeText),
       score: 82,
       interviews: 5,
       offers: 1,
@@ -66,6 +71,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
     }
   });
 
+  const productResumeText =
+    "Product engineer building full-stack surfaces with React, Next.js, and TypeScript. Owned Node.js API integrations and GraphQL endpoints over a PostgreSQL database, styled with Tailwind, and deployed to AWS. Comfortable across REST and modern CI/CD.";
   const productResume = await prisma.resumeVersion.create({
     data: {
       userId: user.id,
@@ -73,6 +80,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
       versionTag: "v7",
       fileName: "maya-chen-product-v7.pdf",
       targetRole: "Full Stack Engineer",
+      contentText: productResumeText,
+      skills: extractSkills(productResumeText),
       score: 91,
       interviews: 8,
       offers: 2,
@@ -80,6 +89,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
     }
   });
 
+  const internshipResumeText =
+    "Software engineering intern projects using React and JavaScript on the frontend and Python with Flask on the backend. Worked with SQL databases and version control in Git. Built a study assistant and a payments simulator.";
   const internshipResume = await prisma.resumeVersion.create({
     data: {
       userId: user.id,
@@ -87,6 +98,8 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
       versionTag: "v3",
       fileName: "maya-chen-internship-v3.pdf",
       targetRole: "Software Engineer Intern",
+      contentText: internshipResumeText,
+      skills: extractSkills(internshipResumeText),
       score: 76,
       interviews: 3,
       offers: 0,
