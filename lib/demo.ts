@@ -14,6 +14,15 @@ const daysAgo = (days: number, hour = 10) => {
   return date;
 };
 
+// Lightweight resolver for the single implicit demo user. Kept cheap for the
+// hot path (no bcrypt hash, no reset checks) — it only seeds the full workspace
+// on the very first run when the user row does not exist yet.
+export async function ensureDemoUser(prisma: PrismaClient) {
+  const existing = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  if (existing) return existing;
+  return ensureDemoWorkspace(prisma, { force: true });
+}
+
 export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force?: boolean } = {}) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const user = await prisma.user.upsert({

@@ -1,19 +1,15 @@
-import { getServerSession } from "next-auth";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeDates } from "@/lib/serializers";
+import { getCurrentUserId } from "@/lib/session";
 import type { Activity, Application, Resume } from "@/types/app";
 
 export const dynamic = "force-dynamic";
 
 async function getData() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user.id) {
-    return { applications: [], resumes: [], activities: [] };
-  }
+  const userId = await getCurrentUserId();
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     include: {
       applications: { include: { resume: true }, orderBy: { updatedAt: "desc" } },
       resumes: { orderBy: { createdAt: "desc" } },

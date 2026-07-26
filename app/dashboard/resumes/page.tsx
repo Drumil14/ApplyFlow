@@ -1,19 +1,15 @@
-import { getServerSession } from "next-auth";
 import { ResumeManager } from "@/components/dashboard/ResumeManager";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeDates } from "@/lib/serializers";
+import { getCurrentUserId } from "@/lib/session";
 import type { Resume } from "@/types/app";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResumesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user.id) {
-    return <ResumeManager initialResumes={[]} />;
-  }
+  const userId = await getCurrentUserId();
   const resumes = await prisma.resumeVersion.findMany({
-    where: { userId: session.user.id },
+    where: { userId },
     include: { applications: { select: { id: true, company: true, role: true, status: true } } },
     orderBy: { createdAt: "desc" }
   });
