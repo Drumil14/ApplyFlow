@@ -1,11 +1,17 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+type CardProps = HTMLAttributes<HTMLDivElement> & {
+  /** Adds hover affordance for cards that act as links/buttons. */
+  interactive?: boolean;
+};
+
+export function Card({ className, interactive = false, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-white/10 bg-white/[0.045] shadow-panel backdrop-blur-xl light:border-slate-200 light:bg-white light:shadow-sm",
+        "panel rounded-xl border border-hairline",
+        interactive && "transition-colors duration-200 hover:border-hairline-strong",
         className
       )}
       {...props}

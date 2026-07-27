@@ -2,15 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   ApplyFlow design tokens
+   ----------------------------------------------------------------------------
+   One source of truth for color, elevation, and radii. Colors are stored as
+   space-separated RGB channel triples so Tailwind's `/opacity` modifiers work
+   (rgb(var(--x) / <alpha>)). Semantic variables flip on the `.light` class
+   (set on <html> by ThemeToggle), so every surface built off these tokens
+   themes correctly in both modes. Restraint: a single accent; status hues are
+   treated as data, not decoration.
+   ========================================================================== */
+
 :root {
   color-scheme: dark;
-  background: #07090d;
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter,
+    ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  /* Canvas & surfaces (dark) */
+  --bg: 8 8 9;
+  --bg-subtle: 12 12 14;
+  --surface: 22 23 26;
+  --surface-hover: 32 33 37;
+  --elevated: 28 29 33;
+
+  /* Line — hairlines & insets derive from this via alpha */
+  --line: 255 255 255;
+
+  /* Text */
+  --text: 237 238 240;
+  --text-secondary: 156 158 164;
+  --text-tertiary: 104 106 112;
+
+  /* Accent = contrast, not colour. Near-white on dark → dark foreground text. */
+  --accent: 244 244 246;
+  --accent-hover: 255 255 255;
+  --accent-fg: 12 12 14;
+
+  /* Status — greyscale lightness ramp (dim = early/negative, bright = late/win) */
+  --status-neutral: 118 120 126;
+  --status-amber: 148 150 156;
+  --status-blue: 198 200 206;
+  --status-violet: 172 174 180;
+  --status-green: 232 233 237;
+  --status-rose: 92 94 100;
+
+  /* Gradient stops — tactile black→grey surfaces */
+  --grad-from: 30 31 35;
+  --grad-to: 13 14 16;
+  --grad-hero-from: 48 49 54;
+  --grad-hero-to: 11 11 13;
+  --grad-quiet-from: 20 21 24;
+  --grad-quiet-to: 12 13 15;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 34px -14px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 30px 70px -24px rgba(0, 0, 0, 0.8);
 }
 
 .light {
   color-scheme: light;
+
+  --bg: 244 245 247;
+  --bg-subtle: 255 255 255;
+  --surface: 255 255 255;
+  --surface-hover: 247 248 250;
+  --elevated: 255 255 255;
+
+  --line: 15 20 30;
+
+  --text: 23 24 28;
+  --text-secondary: 86 90 99;
+  --text-tertiary: 135 139 148;
+
+  --accent: 20 20 22;
+  --accent-hover: 0 0 0;
+  --accent-fg: 255 255 255;
+
+  /* Greyscale ramp inverts for light: win = darkest (most contrast) */
+  --status-neutral: 140 143 150;
+  --status-amber: 120 123 130;
+  --status-blue: 60 63 70;
+  --status-violet: 92 95 102;
+  --status-green: 26 27 31;
+  --status-rose: 170 172 178;
+
+  --grad-from: 255 255 255;
+  --grad-to: 244 245 247;
+  --grad-hero-from: 252 252 253;
+  --grad-hero-to: 231 232 235;
+  --grad-quiet-from: 252 252 253;
+  --grad-quiet-to: 245 246 248;
+
+  --shadow-sm: 0 1px 2px rgba(15, 20, 30, 0.06);
+  --shadow-md: 0 10px 30px -14px rgba(15, 20, 30, 0.14);
+  --shadow-lg: 0 28px 64px -24px rgba(15, 20, 30, 0.2);
 }
 
 * {
@@ -24,21 +113,13 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 18rem),
-    radial-gradient(circle at 20% 0%, rgba(124, 247, 212, 0.12), transparent 24rem),
-    radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.11), transparent 22rem),
-    #07090d;
-  color: #f8fafc;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-.light body {
-  background:
-    linear-gradient(180deg, rgba(10, 14, 24, 0.03), transparent 20rem),
-    radial-gradient(circle at 15% 0%, rgba(20, 184, 166, 0.12), transparent 25rem),
-    #f7f8fb;
-  color: #0f172a;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 button,
@@ -46,6 +127,7 @@ input,
 textarea,
 select {
   font: inherit;
+  color: inherit;
 }
 
 button {
@@ -57,7 +139,7 @@ button:disabled {
 }
 
 ::selection {
-  background: rgba(124, 247, 212, 0.28);
+  background: rgb(var(--accent) / 0.2);
 }
 
 ::-webkit-scrollbar {
@@ -66,32 +148,79 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.28);
+  background: rgb(var(--line) / 0.16);
   border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
-.soft-grid {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 44px 44px;
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-tertiary));
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
-.light .soft-grid {
-  background-image:
-    linear-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.055) 1px, transparent 1px);
+/* ----------------------------------------------------------------------------
+   Chrome material — translucent, blurred, content scrolls under (§12).
+   Reserved for actual chrome (sidebar, header, menus); never on content cards.
+   -------------------------------------------------------------------------- */
+.material {
+  background: color-mix(in srgb, rgb(var(--bg)) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
-.glass {
-  background: rgba(12, 17, 28, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(22px);
+.material-strong {
+  background: color-mix(in srgb, rgb(var(--elevated)) 86%, transparent);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
 
-.light .glass {
-  background: rgba(255, 255, 255, 0.78);
-  border-color: rgba(15, 23, 42, 0.1);
+/* ----------------------------------------------------------------------------
+   Gradient surfaces — every panel is a subtle black→grey gradient so nothing
+   reads dead-flat; a bright inset top edge catches light (§12). Hierarchy comes
+   from gradient strength: hero (strongest) > panel > quiet.
+   Apply border/radius/padding via Tailwind on the element.
+   -------------------------------------------------------------------------- */
+.panel {
+  background: linear-gradient(157deg, rgb(var(--grad-from)) 0%, rgb(var(--grad-to)) 100%);
+  box-shadow: inset 0 1px 0 0 rgb(var(--line) / 0.06), var(--shadow-md);
+}
+
+.panel-hero {
+  background: radial-gradient(135% 130% at 50% -14%, rgb(var(--grad-hero-from)) 0%, rgb(var(--grad-hero-to)) 60%);
+  box-shadow: inset 0 1px 0 0 rgb(var(--line) / 0.11), var(--shadow-lg);
+}
+
+.panel-quiet {
+  background: linear-gradient(157deg, rgb(var(--grad-quiet-from)) 0%, rgb(var(--grad-quiet-to)) 100%);
+  box-shadow: inset 0 1px 0 0 rgb(var(--line) / 0.05);
+}
+
+/* Uppercase eyebrow / label — size-specific positive tracking (§15) */
+.eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--text-tertiary));
+}
+
+/* Tabular figures for metrics — craft detail */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "cv02", "cv03", "cv04";
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material,
+  .material-strong {
+    background: rgb(var(--bg));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

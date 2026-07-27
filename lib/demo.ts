@@ -29,12 +29,12 @@ export async function ensureDemoWorkspace(prisma: PrismaClient, options: { force
   const user = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
     update: {
-      name: "Maya Chen",
+      name: "Jordan Ellis",
       passwordHash,
       targetRole: "New Grad Software Engineer"
     },
     create: {
-      name: "Maya Chen",
+      name: "Jordan Ellis",
       email: DEMO_EMAIL,
       passwordHash,
       targetRole: "New Grad Software Engineer"

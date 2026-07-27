@@ -1,26 +1,15 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
+const base =
+  "w-full rounded-md border border-hairline bg-surface-inset text-base text-content outline-none transition-colors placeholder:text-content-tertiary focus:border-accent/60 focus:bg-surface focus:ring-2 focus:ring-accent/20";
+
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "h-10 w-full rounded-md border border-white/10 bg-white/[0.055] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand/60 focus:ring-2 focus:ring-brand/15 light:border-slate-200 light:bg-white light:text-slate-950",
-        className
-      )}
-      {...props}
-    />
-  );
+  return <input className={cn(base, "h-10 px-3", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
-    <textarea
-      className={cn(
-        "min-h-28 w-full resize-none rounded-md border border-white/10 bg-white/[0.055] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand/60 focus:ring-2 focus:ring-brand/15 light:border-slate-200 light:bg-white light:text-slate-950",
-        className
-      )}
-      {...props}
-    />
+    <textarea className={cn(base, "min-h-28 resize-none px-3 py-2.5 leading-6", className)} {...props} />
   );
 }

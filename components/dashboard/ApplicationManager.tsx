@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Textarea } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { formatCurrencyRange, formatDateShort } from "@/lib/utils";
 import type { Application, Resume, Status } from "@/types/app";
 import { statuses, statusLabels } from "@/types/app";
@@ -261,8 +262,27 @@ function ApplicationModal({
             <form className="grid gap-4 sm:grid-cols-2" onSubmit={submit}>
               <label className="text-sm">Company<Input className="mt-2" name="company" defaultValue={values.company} required /></label>
               <label className="text-sm">Role<Input className="mt-2" name="role" defaultValue={values.role} required /></label>
-              <label className="text-sm">Status<select name="status" defaultValue={values.status} className="mt-2 h-10 w-full rounded-md border border-white/10 bg-[#111724] px-3 text-sm outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/15 light:border-slate-200 light:bg-white">{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label>
-              <label className="text-sm">Resume<select name="resumeId" defaultValue={values.resumeId} className="mt-2 h-10 w-full rounded-md border border-white/10 bg-[#111724] px-3 text-sm outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/15 light:border-slate-200 light:bg-white"><option value="">No resume</option>{resumes.map((resume) => <option key={resume.id} value={resume.id}>{resume.title} {resume.versionTag}</option>)}</select></label>
+              <label className="text-sm">
+                <span className="mb-2 block">Status</span>
+                <Select
+                  name="status"
+                  aria-label="Status"
+                  defaultValue={values.status}
+                  options={statuses.map((status) => ({ value: status, label: statusLabels[status] }))}
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-2 block">Resume</span>
+                <Select
+                  name="resumeId"
+                  aria-label="Resume"
+                  defaultValue={values.resumeId}
+                  options={[
+                    { value: "", label: "No resume" },
+                    ...resumes.map((resume) => ({ value: resume.id, label: `${resume.title} ${resume.versionTag}` }))
+                  ]}
+                />
+              </label>
               <label className="text-sm">Location<Input className="mt-2" name="location" defaultValue={values.location} /></label>
               <label className="text-sm">Work mode<Input className="mt-2" name="workMode" defaultValue={values.workMode} /></label>
               <label className="text-sm">Salary min<Input className="mt-2" name="salaryMin" type="number" defaultValue={values.salaryMin} /></label>

@@ -2,26 +2,43 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonSize = "sm" | "md";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-white text-ink shadow-glow hover:bg-brand focus-visible:ring-brand light:bg-slate-950 light:text-white",
+    "bg-accent text-accent-fg hover:bg-accent-hover focus-visible:ring-accent/60",
   secondary:
-    "border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1] light:border-slate-200 light:bg-white light:text-slate-950 light:hover:bg-slate-50",
-  ghost: "text-slate-300 hover:bg-white/[0.07] hover:text-white light:text-slate-600 light:hover:bg-slate-100 light:hover:text-slate-950",
-  danger: "border border-rose/30 bg-rose/10 text-rose hover:bg-rose/15"
+    "border border-hairline-strong bg-surface text-content hover:bg-surface-hover focus-visible:ring-accent/50",
+  ghost:
+    "text-content-secondary hover:bg-surface-hover hover:text-content focus-visible:ring-accent/50",
+  danger:
+    "border border-status-rose/30 bg-status-rose/10 text-status-rose hover:bg-status-rose/16 focus-visible:ring-status-rose/50"
+};
+
+const sizes: Record<ButtonSize, string> = {
+  sm: "h-8 gap-1.5 px-3 text-sm",
+  md: "h-10 gap-2 px-4 text-base"
 };
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   icon?: ReactNode;
 };
 
-export function Button({ className, variant = "primary", icon, children, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant = "primary",
+  size = "md",
+  icon,
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50",
+        sizes[size],
         variants[variant],
         className
       )}

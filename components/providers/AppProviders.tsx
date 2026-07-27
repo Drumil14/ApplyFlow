@@ -17,10 +17,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
         position="top-right"
         toastOptions={{
           style: {
-            background: "rgba(12, 17, 28, 0.92)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "#f8fafc",
-            backdropFilter: "blur(18px)"
+            background: "rgb(var(--elevated))",
+            border: "1px solid rgb(var(--line) / 0.12)",
+            color: "rgb(var(--text))",
+            borderRadius: "0.625rem",
+            boxShadow: "var(--shadow-lg)"
           }
         }}
       />

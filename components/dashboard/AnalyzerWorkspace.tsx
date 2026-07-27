@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import type { AnalysisResult } from "@/types/app";
 
 const sample =
@@ -65,23 +66,20 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
         <Card className="p-5">
           <form onSubmit={analyze}>
             <div className="mb-3">
-              <label htmlFor="resumeId" className="mb-2 block text-sm font-medium">
+              <label id="resumeId-label" htmlFor="resumeId" className="mb-2 block text-sm font-medium">
                 Resume version
               </label>
               {resumes.length ? (
-                <select
+                <Select
                   id="resumeId"
-                  name="resumeId"
+                  aria-labelledby="resumeId-label"
                   value={resumeId}
-                  onChange={(event) => setResumeId(event.target.value)}
-                  className="w-full rounded-md border border-white/10 bg-white/[0.045] px-3 py-2.5 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-brand/60 light:border-slate-200 light:bg-white light:text-slate-950"
-                >
-                  {resumes.map((resume) => (
-                    <option key={resume.id} value={resume.id}>
-                      {resume.title} · {resume.versionTag} ({resume.skills.length} skills)
-                    </option>
-                  ))}
-                </select>
+                  onChange={setResumeId}
+                  options={resumes.map((resume) => ({
+                    value: resume.id,
+                    label: `${resume.title} · ${resume.versionTag} (${resume.skills.length} skills)`
+                  }))}
+                />
               ) : (
                 <div className="flex items-center gap-2 rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">
                   <FileText className="h-4 w-4 shrink-0" />
