@@ -214,6 +214,38 @@ button:disabled {
   font-feature-settings: "tnum", "cv02", "cv03", "cv04";
 }
 
+/* ----------------------------------------------------------------------------
+   Branded splash — greyscale, restrained. The reduced-motion block below zeroes
+   these out automatically (animation/transition duration → ~0), so reduced-motion
+   users get a static screen with no pulse, shimmer, or fade.
+   -------------------------------------------------------------------------- */
+@keyframes splash-pulse {
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-progress {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(230%);
+  }
+}
+
+.splash-pulse {
+  animation: splash-pulse 1.9s ease-in-out infinite;
+}
+
+.splash-bar {
+  animation: splash-progress 1.15s ease-in-out infinite;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .material,
   .material-strong {

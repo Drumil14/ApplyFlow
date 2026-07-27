@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { DashboardShell } from "@/components/app/DashboardShell";
+import { SplashScreen } from "@/components/app/SplashScreen";
 import { DEMO_EMAIL, ensureDemoWorkspace } from "@/lib/demo";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -14,5 +15,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     await ensureDemoWorkspace(prisma);
   }
 
-  return <DashboardShell user={user}>{children}</DashboardShell>;
+  return (
+    <>
+      <SplashScreen />
+      <DashboardShell user={user}>{children}</DashboardShell>
+    </>
+  );
 }
