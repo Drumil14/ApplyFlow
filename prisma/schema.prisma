@@ -3,14 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (PgBouncer) used at runtime — safe for serverless/Vercel.
+  url       = env("DATABASE_URL")
+  // Direct connection used for migrations (Neon's pooled endpoint can't run them).
+  directUrl = env("DIRECT_URL")
 }
 
-// NOTE: SQLite does not support Prisma enums or scalar list (`String[]`) fields.
-// Status/type columns are plain strings (see lib/enums.ts for the allowed
-// values) and list columns are stored as JSON. This keeps the app fully
-// self-contained for local dev with a single file database (no server needed).
+// NOTE: Status/type columns are plain strings (see lib/enums.ts for the allowed
+// values) and list columns are stored as JSON. Postgres supports JSON natively.
+// These carried over unchanged from the SQLite setup, so no data-shape changes
+// were needed when moving to Postgres.
 
 model User {
   id             String        @id @default(cuid())
