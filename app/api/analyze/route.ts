@@ -39,7 +39,8 @@ export async function POST(request: Request) {
     }
 
     const jdSkills = extractSkills(jobDescription);
-    const { score, matched, missing } = scoreMatch(jdSkills, resume.skills);
+    const resumeSkills = (resume.skills as string[]) ?? [];
+    const { score, matched, missing } = scoreMatch(jdSkills, resumeSkills);
     const seniorityLevel = seniorityFor(jobDescription);
 
     const resumeSuggestions = missing.map(
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       requiredSkills: jdSkills,
       technologies: matched,
       seniorityLevel,
-      keywords: resume.skills,
+      keywords: resumeSkills,
       resumeSuggestions
     };
 

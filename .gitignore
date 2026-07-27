@@ -1,6 +1,9 @@
 .next
 node_modules
 data/db.json
+prisma/dev.db
+prisma/dev.db-journal
+*.db
 tsconfig.tsbuildinfo
 npm-debug.log*
 dev-server*.log

@@ -3,28 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-enum ApplicationStatus {
-  APPLIED
-  OA
-  INTERVIEW
-  FINAL_ROUND
-  OFFER
-  REJECTED
-}
-
-enum ActivityType {
-  APPLICATION_CREATED
-  APPLICATION_UPDATED
-  STATUS_CHANGED
-  NOTE_ADDED
-  INTERVIEW_SCHEDULED
-  RESUME_UPLOADED
-  ANALYSIS_CREATED
-}
+// NOTE: SQLite does not support Prisma enums or scalar list (`String[]`) fields.
+// Status/type columns are plain strings (see lib/enums.ts for the allowed
+// values) and list columns are stored as JSON. This keeps the app fully
+// self-contained for local dev with a single file database (no server needed).
 
 model User {
   id             String        @id @default(cuid())
@@ -50,12 +36,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -82,7 +68,7 @@ model Application {
   id             String            @id @default(cuid())
   company        String
   role           String
-  status         ApplicationStatus @default(APPLIED)
+  status         String            @default("APPLIED")
   location       String?
   workMode       String?           @default("Hybrid")
   salaryMin      Int?
@@ -91,8 +77,8 @@ model Application {
   appliedAt      DateTime?         @default(now())
   recruiterName  String?
   recruiterEmail String?
-  notes          String?           @db.Text
-  links          String[]          @default([])
+  notes          String?
+  links          Json              @default("[]")
   priority       Int               @default(2)
   userId         String
   resumeId       String?
@@ -113,8 +99,8 @@ model ResumeVersion {
   fileName     String
   fileUrl      String?
   targetRole   String?
-  contentText  String?       @db.Text
-  skills       String[]      @default([])
+  contentText  String?
+  skills       Json          @default("[]")
   score        Float         @default(0)
   interviews   Int           @default(0)
   offers       Int           @default(0)
@@ -128,7 +114,7 @@ model ResumeVersion {
 
 model Activity {
   id            String        @id @default(cuid())
-  type          ActivityType
+  type          String
   message       String
   metadata      Json?
   userId        String
@@ -143,12 +129,12 @@ model Activity {
 model JobAnalysis {
   id                 String   @id @default(cuid())
   title              String?
-  sourceText         String   @db.Text
-  requiredSkills     String[]
-  technologies       String[]
+  sourceText         String
+  requiredSkills     Json     @default("[]")
+  technologies       Json     @default("[]")
   seniorityLevel     String
-  keywords           String[]
-  resumeSuggestions  String[]
+  keywords           Json     @default("[]")
+  resumeSuggestions  Json     @default("[]")
   matchScore         Int
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)

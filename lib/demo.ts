@@ -1,4 +1,5 @@
-import { ApplicationStatus, type PrismaClient } from "@prisma/client";
+import { type PrismaClient } from "@prisma/client";
+import { ApplicationStatus } from "@/lib/enums";
 import bcrypt from "bcryptjs";
 import { extractSkills } from "@/lib/skills";
 
