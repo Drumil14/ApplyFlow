@@ -66,6 +66,44 @@ export type Activity = {
   } | null;
 };
 
+export type AiStatus =
+  | "ok"
+  | "unconfigured"
+  | "failed"
+  | "rate_limited"
+  | "rate_limit_unavailable";
+
+/** Non-sensitive rate-limit metadata surfaced to the UI (no identifiers). */
+export type AiRateLimitInfo = {
+  limit: number;
+  remaining: number;
+  /** Unix timestamp (ms) when the window resets. */
+  reset: number;
+};
+
+export type JobAIAnalysis = {
+  roleTitle: string;
+  seniority: string;
+  summary: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  responsibilities: string[];
+  strengths: string[];
+  gaps: string[];
+  resumeSuggestions: string[];
+  interviewTopics: string[];
+};
+
+export type AnalysisHistoryItem = {
+  id: string;
+  title: string | null;
+  seniorityLevel: string;
+  matchScore: number;
+  requiredSkills: string[];
+  resumeSuggestions: string[];
+  createdAt: string;
+};
+
 export type AnalysisResult = {
   requiredSkills: string[];
   technologies: string[];
@@ -75,4 +113,8 @@ export type AnalysisResult = {
   matchScore: number;
   matched: string[];
   missing: string[];
+  ai: JobAIAnalysis | null;
+  aiStatus: AiStatus;
+  /** Present only when the AI layer was rate limited. */
+  aiRateLimit?: AiRateLimitInfo | null;
 };

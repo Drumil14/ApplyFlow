@@ -32,6 +32,14 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-canvas text-content">
+      {/* Keyboard users can jump straight past the chrome to the page content. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-hairline focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-content focus:shadow-lg"
+      >
+        Skip to content
+      </a>
+
       <CommandMenu />
 
       {/* Sidebar — the heaviest structural material (§12) */}
@@ -126,7 +134,9 @@ export function DashboardShell({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1800px] px-5 pb-28 pt-8 sm:px-8 xl:px-10 lg:pb-14">{children}</main>
+        <main id="main-content" className="mx-auto w-full max-w-[1800px] px-5 pb-28 pt-8 sm:px-8 xl:px-10 lg:pb-14">
+          {children}
+        </main>
       </div>
 
       {/* Mobile nav — floating material bar */}

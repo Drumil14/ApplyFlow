@@ -1,5 +1,6 @@
 .next
 node_modules
+storybook-static
 data/db.json
 prisma/dev.db
 prisma/dev.db-journal
