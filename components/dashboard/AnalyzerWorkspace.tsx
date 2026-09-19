@@ -223,7 +223,9 @@ function AIInsights({ result }: { result: AnalysisResult }) {
         </span>
       </div>
 
-      <p className="text-sm leading-6 text-content-secondary">{ai.summary}</p>
+      <p className="rounded-lg border border-hairline border-l-2 border-l-accent/60 bg-surface-inset p-4 text-sm leading-6 text-content-secondary">
+        {ai.summary}
+      </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <AIList title="Strengths" items={ai.strengths} tone="positive" />

@@ -81,6 +81,16 @@ export type JobAIAnalysis = {
   interviewTopics: string[];
 };
 
+export type AnalysisHistoryItem = {
+  id: string;
+  title: string | null;
+  seniorityLevel: string;
+  matchScore: number;
+  requiredSkills: string[];
+  resumeSuggestions: string[];
+  createdAt: string;
+};
+
 export type AnalysisResult = {
   requiredSkills: string[];
   technologies: string[];

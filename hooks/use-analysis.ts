@@ -1,9 +1,17 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import type { AnalysisResult } from "@/types/app";
+import type { AnalysisHistoryItem, AnalysisResult } from "@/types/app";
+
+export function useAnalysisHistory(initialData?: AnalysisHistoryItem[]) {
+  return useQuery({
+    queryKey: queryKeys.analyses,
+    queryFn: async () => (await fetchJson<{ analyses: AnalysisHistoryItem[] }>("/api/analyses")).analyses,
+    initialData
+  });
+}
 
 export type AnalyzeJobVariables = {
   resumeId: string;
