@@ -5,6 +5,10 @@ project. Organize applications on a Kanban board, track resume versions, and
 analyze how well a resume matches a job description using a transparent
 deterministic matcher **plus** an optional LLM interpretation layer.
 
+ApplyFlow is a genuinely full-stack product: it has a real server-side data
+layer backed by PostgreSQL and Prisma, with the complete path from UI → API
+route handlers → data access → database.
+
 ## Tech stack
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript** (strict)
@@ -15,6 +19,8 @@ deterministic matcher **plus** an optional LLM interpretation layer.
 - **NextAuth** (email/password) with a demo-user fallback
 - **Anthropic Claude** via `@anthropic-ai/sdk` for AI analysis, behind a swappable provider interface
 - **Zod** for validating structured AI output
+- **Upstash Redis** (`@upstash/ratelimit` + `@upstash/redis`) for server-side AI rate limiting
+- **pdfjs-dist** for client-side PDF text extraction on resume upload
 - **Vitest** + **React Testing Library** + `@testing-library/user-event`
 - **Storybook** (`@storybook/nextjs`) for the design system
 - **Framer Motion** (with global reduced-motion support), **Recharts** (code-split)
@@ -26,13 +32,22 @@ deterministic matcher **plus** an optional LLM interpretation layer.
   and a screen-reader announcement on each move.
 - **Application management**: statuses, recruiter details, links, salary ranges,
   deadlines, resume association; create/edit/delete with optimistic delete.
-- **Resume versions**, each tied to the applications it carried; skills are
-  extracted from pasted resume text at upload time.
+  Each application can carry: company, role, status, location, work mode, salary
+  range, application date, deadline, recruiter name/email, notes, related links,
+  priority, and the resume version used.
+- **Resume versions**, each tied to the applications it carried. A version stores
+  title, version tag, file-name metadata, target role, pasted resume text,
+  extracted skills, associated applications, and score/interview/offer/rejection
+  counts. Resumes can be added by **uploading a PDF** (text extracted
+  client-side) or by pasting text; known skills are extracted at upload time.
 - **Match analyzer** — two layers (see below).
 - **Analysis history** — every analysis is saved and browsable; expand a row to
   revisit its stored required skills and resume suggestions.
-- **Command palette** (Ctrl/⌘+K) with full keyboard navigation.
-- Dashboard with pipeline, conversion, and a code-split weekly-activity chart.
+- **Command palette** (Ctrl/⌘+K) with full keyboard navigation across Dashboard,
+  Applications, Kanban board, Analyzer, Resume versions, and Analytics.
+- Dashboard with pipeline, conversion, and a code-split weekly-activity chart —
+  total/active applications, interviews, offers, rejection and conversion rates,
+  pipeline distribution, upcoming deadlines, recent activity, and resume stats.
 - Dark/light themes; loading, empty, and error states across the main surfaces.
 
 ## AI architecture — deterministic + LLM
@@ -60,8 +75,11 @@ description, then scores the overlap:
 score = round(100 * matched / total job-description skills)
 ```
 
-It is pure, has no I/O, and is covered by unit tests. This is the source of
-truth for the numeric match score.
+Skill extraction normalizes aliases (`React.js`/`ReactJS` → `react`,
+`Postgres` → `postgresql`, `NextJS` → `next.js`, `Node.js` → `node`) and uses
+whole-word matching so `java` never matches inside `javascript`. It is pure, has
+no I/O, and is covered by unit tests — the source of truth for the numeric match
+score.
 
 **LLM layer** (`lib/ai/`): adds qualitative interpretation — role summary,
 strengths, gaps, responsibilities, honest resume suggestions, and interview
@@ -87,6 +105,38 @@ unavailable" / "not configured"* and the deterministic match still works fully.
 The API key is read only on the server (Node.js runtime) and never exposed to
 the browser.
 
+### AI rate limiting (Upstash)
+
+The paid AI layer is protected by a server-side rate limiter (`lib/rate-limit.ts`)
+so the public deployment can't burn Anthropic credits:
+
+- **Fixed window: 5 AI analyses per 24h** per identifier, via `@upstash/ratelimit`.
+- **Identifier**: the authenticated user id when a real session exists, otherwise
+  a server-derived client IP (`x-forwarded-for` / `x-real-ip`). It is hashed
+  before use as a Redis key; no request/JD/resume content is ever stored.
+- **Only the AI layer is limited** — the deterministic matcher is always
+  unlimited. When the limit is hit, the analyzer returns the deterministic result
+  with a calm `rate_limited` status.
+- **Fail closed**: if Upstash is unconfigured or unreachable, the AI request is
+  skipped (`rate_limit_unavailable`) rather than making an unrestricted paid call.
+  The Upstash token is server-only and never exposed to the browser.
+
+## Full-stack architecture
+
+```
+React / Next.js UI
+        ↓
+Next.js App Router
+        ↓
+API route handlers
+        ↓
+Prisma ORM
+        ↓
+PostgreSQL
+```
+
+The complete path — UI → API → data access → database — lives in this one repo.
+
 ## Frontend data architecture
 
 Server components fetch initial data with Prisma and pass it as `initialData` to
@@ -102,6 +152,69 @@ has no loading flash, and subsequent reads/writes stay in sync:
 - `hooks/use-command-menu.ts` — command-palette keyboard/filter logic extracted
   from the component so it can be unit-tested in isolation.
 
+## Database
+
+ApplyFlow uses PostgreSQL through Prisma. Main models:
+
+```
+User
+Account
+Session
+VerificationToken
+Application
+ResumeVersion
+Activity
+JobAnalysis
+```
+
+Relations connect:
+
+```
+User
+ ├── Applications
+ ├── Resume Versions
+ ├── Activity
+ └── Job Analyses
+```
+
+Applications can also reference the resume version used for that application.
+The schema includes indexes for frequently queried fields:
+
+```
+Application(userId, status)
+Application(deadline)
+Activity(userId, createdAt)
+```
+
+## Authentication
+
+Credentials-based authentication using **NextAuth**, **bcrypt**, **Prisma**, and
+**PostgreSQL** — passwords are stored as bcrypt hashes, never plaintext. The app
+also supports an **implicit demo-workspace fallback**, so the demo experience
+works without requiring a user to authenticate first.
+
+## API routes
+
+```
+GET/POST        /api/applications
+PATCH/DELETE    /api/applications/[id]
+
+GET/POST        /api/resumes
+GET/PATCH/DELETE /api/resumes/[id]
+
+POST            /api/analyze        deterministic + (rate-limited) AI analysis
+GET             /api/analyses       saved analysis history
+
+GET             /api/activity
+
+POST            /api/auth/register
+                /api/auth/[...nextauth]
+```
+
+These handle application persistence, resume metadata, analysis records,
+authentication, and activity data. Application writes also generate activity
+records.
+
 ## Testing
 
 `npm test` runs Vitest against both pure logic and UI behavior:
@@ -110,11 +223,21 @@ has no loading flash, and subsequent reads/writes stay in sync:
 - **Hook behavior**: optimistic status change + rollback and optimistic delete +
   rollback (`use-applications`), and the command-palette logic
   (`use-command-menu`).
+- **AI + rate limiting**: the analyze orchestrator gating (provider called when
+  allowed, skipped when rate-limited/unavailable, graceful fallback on provider
+  failure) and the rate limiter itself (identifier resolution, fail-closed
+  behavior, hashed keys) with Upstash mocked — no real Redis calls.
 - **Component behavior** (React Testing Library + user-event): the analyzer —
   paste + submit, structured AI result, deterministic-only fallback when AI is
-  unavailable, and the API-error state.
+  unavailable, the calm rate-limited state, and the API-error state.
 
 Tests target user-visible behavior rather than implementation details.
+
+```bash
+npm test                 # run once
+npm run test:watch       # watch mode
+npm run test:coverage    # with coverage
+```
 
 ## Accessibility
 
@@ -187,7 +310,16 @@ NEXTAUTH_SECRET=
 # deterministic matcher; the AI panel shows "not configured".
 ANTHROPIC_API_KEY=
 # ANALYZE_MODEL=claude-opus-4-8   # optional model override
+
+# AI rate limiting (Upstash Redis). Server-only — never NEXT_PUBLIC_*.
+# When unset, production fails closed: the AI layer is skipped but the
+# deterministic match still works.
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
+
+`DIRECT_URL` is used for direct database access such as Prisma migrations when
+the runtime connection uses a pooled PostgreSQL endpoint.
 
 ### Demo login
 
@@ -203,6 +335,10 @@ npm run typecheck        # tsc --noEmit
 npm test                 # vitest (pure + RTL)
 npm run lint             # eslint
 npm run build-storybook  # static Storybook build
+npm run prisma:generate  # generate Prisma client
+npm run prisma:migrate   # run dev migrations
+npm run prisma:studio    # open Prisma Studio
+npm run db:seed          # seed the demo workspace
 ```
 
 ## Project structure
@@ -217,9 +353,11 @@ components/
 hooks/          TanStack Query data hooks + useCommandMenu
 lib/
   ai/           provider abstraction, schema, orchestrator
+  rate-limit.ts server-side AI rate limiting (Upstash)
   scoring.ts    deterministic match scoring (pure)
   skills.ts     deterministic skill extraction (pure)
-  queryKeys.ts, api.ts, ...
+  pdf.ts        client-side PDF text extraction
+  queryKeys.ts, api.ts, session.ts, ...
 prisma/         schema, migrations, seed
 tests/          Vitest (pure + React Testing Library)
 .storybook/     Storybook config
@@ -230,6 +368,14 @@ types/          shared types
 
 1. Connect the repo to a Vercel project.
 2. Add `DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and
-   (optionally) `ANTHROPIC_API_KEY`.
+   (optionally) `ANTHROPIC_API_KEY` plus `UPSTASH_REDIS_REST_URL` /
+   `UPSTASH_REDIS_REST_TOKEN` to enable and rate-limit the AI layer.
 3. The build script runs `prisma migrate deploy` automatically. To apply
    migrations manually: `npx prisma migrate deploy`.
+
+## Project goal
+
+ApplyFlow demonstrates a complete full-stack product flow using React, Next.js,
+API route handlers, Prisma, and PostgreSQL — plus a transparent deterministic
+matcher paired with an optional, rate-limited LLM layer — while solving a
+practical workflow problem around job-search organization and resume iteration.
