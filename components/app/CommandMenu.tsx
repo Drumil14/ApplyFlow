@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BarChart3, Brain, Briefcase, Columns3, FileText, Home, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useCommandMenu } from "@/hooks/use-command-menu";
 import { useCommandStore } from "@/stores/useCommandStore";
 
@@ -19,6 +20,16 @@ const commands = [
 export function CommandMenu() {
   const { open, setOpen, toggle } = useCommandStore();
   const router = useRouter();
+  // Return focus to whatever was focused before the palette opened.
+  const previousFocus = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      previousFocus.current = document.activeElement as HTMLElement | null;
+    } else {
+      previousFocus.current?.focus?.();
+    }
+  }, [open]);
 
   const { query, setQuery, selected, filtered } = useCommandMenu(commands, {
     open,
@@ -41,6 +52,9 @@ export function CommandMenu() {
           onMouseDown={() => setOpen(false)}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command menu"
             className="mx-auto mt-24 max-w-xl overflow-hidden rounded-lg border border-white/10 bg-[#0b0f17]/95 shadow-panel light:border-slate-200 light:bg-white"
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -51,6 +65,7 @@ export function CommandMenu() {
               <Search className="h-4 w-4 text-slate-500" />
               <input
                 autoFocus
+                aria-label="Search commands"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search commands..."

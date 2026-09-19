@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "framer-motion";
 import { SessionProvider } from "next-auth/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Toaster } from "sonner";
@@ -29,9 +30,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        {children}
-        <Toaster
+      {/* reducedMotion="user" makes every framer-motion animation honor the OS
+          "reduce motion" setting — the CSS block in globals.css only covers CSS
+          animations, not Framer's JS-driven transforms. */}
+      <MotionConfig reducedMotion="user">
+        <SessionProvider>
+          {children}
+          <Toaster
           position="top-right"
           toastOptions={{
             style: {
@@ -42,8 +47,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
               boxShadow: "var(--shadow-lg)"
             }
           }}
-        />
-      </SessionProvider>
+          />
+        </SessionProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

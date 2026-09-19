@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, LinkIcon, Loader2, Plus, Trash2, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   useApplications,
@@ -189,6 +189,19 @@ function ApplicationModal({
   onClose: () => void;
   onSubmit: (payload: Record<string, unknown>) => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // While open: close on Escape and move focus into the dialog.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    dialogRef.current?.querySelector<HTMLElement>("input, textarea")?.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   const values: FormState = application
     ? {
         company: application.company,
@@ -235,6 +248,7 @@ function ApplicationModal({
       {open ? (
         <motion.div className="fixed inset-0 z-50 overflow-y-auto bg-black/55 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="application-modal-title"
