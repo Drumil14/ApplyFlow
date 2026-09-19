@@ -1,55 +1,48 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, Check, FileText, Loader2, ScanSearch, X } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Plus, ScanSearch, Sparkles } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
+import { useAnalyzeJob } from "@/hooks/use-analysis";
+import { useResumes } from "@/hooks/use-resumes";
+import { AddResumeDialog } from "@/components/dashboard/AddResumeDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { MatchScore } from "@/components/ui/MatchScore";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SkillBadge } from "@/components/ui/SkillBadge";
 import { Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import type { AnalysisResult } from "@/types/app";
+import type { AnalysisResult, Resume } from "@/types/app";
 
 const sample =
   "About the role: As a Product Engineer on our Growth Platform team, you will build polished React and TypeScript surfaces used by thousands of teams, own API integrations in Node.js, and partner closely with design, data, and product. You will improve activation funnels, ship accessible UI, instrument experiments, and work with PostgreSQL, observability tooling, feature flags, and modern CI/CD. Strong candidates have shipped full-stack projects, can explain product tradeoffs, and write clearly about impact.";
 
-type ResumeOption = {
-  id: string;
-  title: string;
-  versionTag: string;
-  skills: string[];
-};
-
-export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [loading, setLoading] = useState(false);
+export function AnalyzerWorkspace({ initialResumes }: { initialResumes: Resume[] }) {
+  const { data: resumes = [] } = useResumes(initialResumes);
   const [description, setDescription] = useState("");
-  const [resumeId, setResumeId] = useState(resumes[0]?.id ?? "");
-  const [error, setError] = useState("");
+  const [resumeId, setResumeId] = useState(initialResumes[0]?.id ?? "");
+  const [addOpen, setAddOpen] = useState(false);
+  const analyzeJob = useAnalyzeJob();
 
-  const analyze = async (event: FormEvent<HTMLFormElement>) => {
+  // After creating a resume, the query cache already holds it (useCreateResume);
+  // select it so the user can analyze immediately with no refresh.
+  const onResumeCreated = (resume: Resume) => setResumeId(resume.id);
+
+  const result: AnalysisResult | null = analyzeJob.data ?? null;
+  const loading = analyzeJob.isPending;
+  const error = analyzeJob.error ? analyzeJob.error.message : "";
+
+  const analyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId, jobDescription: description })
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.message ?? "Analysis failed.");
-      if (!data?.analysis) throw new Error("Analysis failed.");
-      setResult(data.analysis);
-      toast.success("Job description analyzed");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not analyze this role.";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
+    analyzeJob.mutate(
+      { resumeId, jobDescription: description },
+      {
+        onSuccess: () => toast.success("Job description analyzed"),
+        onError: (err) => toast.error(err.message || "Could not analyze this role.")
+      }
+    );
   };
 
   return (
@@ -57,8 +50,9 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
       <div>
         <p className="text-sm font-medium text-brand">Match analyzer</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Score a role against your resume</h1>
-        <p className="mt-2 text-sm text-slate-400 light:text-slate-600">
-          Local, deterministic skill matching — no external services. Pick a resume version and paste a job description.
+        <p className="mt-2 text-sm text-content-secondary">
+          A transparent, deterministic skill match — plus optional AI insights when a model is configured. Pick a resume
+          version and paste a job description.
         </p>
       </div>
 
@@ -66,9 +60,19 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
         <Card className="p-5">
           <form onSubmit={analyze}>
             <div className="mb-3">
-              <label id="resumeId-label" htmlFor="resumeId" className="mb-2 block text-sm font-medium">
-                Resume version
-              </label>
+              <div className="mb-2 flex items-center justify-between">
+                <label id="resumeId-label" htmlFor="resumeId" className="block text-sm font-medium">
+                  Resume version
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent outline-none transition-colors hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add resume
+                </button>
+              </div>
               {resumes.length ? (
                 <Select
                   id="resumeId"
@@ -77,13 +81,13 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                   onChange={setResumeId}
                   options={resumes.map((resume) => ({
                     value: resume.id,
-                    label: `${resume.title} · ${resume.versionTag} (${resume.skills.length} skills)`
+                    label: `${resume.title} · ${resume.versionTag} (${resume.skills?.length ?? 0} skills)`
                   }))}
                 />
               ) : (
                 <div className="flex items-center gap-2 rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">
                   <FileText className="h-4 w-4 shrink-0" />
-                  Add a resume version (with pasted text) first so it has skills to match against.
+                  Add a resume version first so it has skills to match against.
                 </div>
               )}
             </div>
@@ -126,12 +130,12 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
             </div>
           ) : error ? (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-rose/25 bg-rose/10 p-4 text-rose">
+              <div className="rounded-full border border-status-rose/30 bg-status-rose/10 p-4 text-status-rose">
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <h2 className="mt-5 text-lg font-semibold">Analysis needs another pass</h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{error}</p>
-              <Button className="mt-5" variant="secondary" onClick={() => setError("")}>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-content-secondary">{error}</p>
+              <Button className="mt-5" variant="secondary" onClick={() => analyzeJob.reset()}>
                 Try again
               </Button>
             </div>
@@ -140,14 +144,11 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Role match</h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-content-secondary">
                     {result.matched.length} of {result.requiredSkills.length} required skills present · {result.seniorityLevel} signal
                   </p>
                 </div>
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-brand/25 bg-brand/10">
-                  <span className="text-3xl font-semibold text-brand">{result.matchScore}</span>
-                  <span className="mt-7 text-xs text-brand">%</span>
-                </div>
+                <MatchScore score={result.matchScore} />
               </div>
 
               <SkillList
@@ -170,7 +171,7 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                     {result.resumeSuggestions.map((suggestion) => (
                       <div
                         key={suggestion}
-                        className="rounded-md border border-white/10 bg-white/[0.035] p-3 text-sm leading-6 text-slate-300 light:border-slate-200 light:bg-slate-50 light:text-slate-700"
+                        className="rounded-md border border-hairline bg-surface-inset p-3 text-sm leading-6 text-content-secondary"
                       >
                         {suggestion}
                       </div>
@@ -178,20 +179,145 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                   </div>
                 </div>
               ) : null}
+
+              <AIInsights result={result} />
             </motion.div>
           ) : (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-white/10 bg-white/[0.06] p-4 text-brand light:border-slate-200 light:bg-slate-50">
+              <div className="rounded-full border border-hairline bg-surface-inset p-4 text-accent">
                 <ScanSearch className="h-6 w-6" />
               </div>
               <h2 className="mt-5 text-lg font-semibold">Ready when you paste a role</h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-sm text-sm leading-6 text-content-secondary">
                 ApplyFlow compares the job&apos;s skills against your selected resume version and shows exactly what matches and what&apos;s missing.
               </p>
             </div>
           )}
         </Card>
       </div>
+
+      <AddResumeDialog open={addOpen} onClose={() => setAddOpen(false)} onCreated={onResumeCreated} />
+    </div>
+  );
+}
+
+/** Turn a reset timestamp (unix ms) into a calm, human-friendly hint. */
+function resetHint(reset: number | undefined): string {
+  if (!reset) return "";
+  const ms = reset - Date.now();
+  if (ms <= 0) return " You can try again now.";
+  const hours = Math.round(ms / (1000 * 60 * 60));
+  if (hours >= 1) return ` Resets in about ${hours} hour${hours === 1 ? "" : "s"}.`;
+  const minutes = Math.max(1, Math.round(ms / (1000 * 60)));
+  return ` Resets in about ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+}
+
+function aiInsightsMessage(result: AnalysisResult): string {
+  switch (result.aiStatus) {
+    case "rate_limited":
+      return `Daily AI insights limit reached. Your skill match is still available. Try again tomorrow.${resetHint(
+        result.aiRateLimit?.reset
+      )}`;
+    case "rate_limit_unavailable":
+      return "AI insights are temporarily unavailable. Your skill match is still available.";
+    case "failed":
+      return "AI insights are temporarily unavailable. Your deterministic match above is fully accurate.";
+    default:
+      return "AI insights aren't configured. Add an API key to enable qualitative analysis — the deterministic match above works either way.";
+  }
+}
+
+function AIInsights({ result }: { result: AnalysisResult }) {
+  const { ai, aiStatus } = result;
+
+  if (aiStatus !== "ok" || !ai) {
+    const message = aiInsightsMessage(result);
+    return (
+      <section aria-labelledby="ai-insights-heading" className="border-t border-hairline pt-6">
+        <div className="flex items-start gap-3 rounded-lg border border-hairline bg-surface-inset p-4">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+          <div>
+            <h3 id="ai-insights-heading" className="text-sm font-medium text-content">
+              AI insights
+            </h3>
+            <p className="mt-1 text-sm text-content-secondary">{message}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="ai-insights-heading" className="space-y-5 border-t border-hairline pt-6">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
+        <h3 id="ai-insights-heading" className="text-sm font-medium">
+          AI insights
+        </h3>
+        <span className="text-xs text-content-tertiary">
+          {ai.roleTitle} · {ai.seniority}
+        </span>
+      </div>
+
+      <p className="rounded-lg border border-hairline border-l-2 border-l-accent/60 bg-surface-inset p-4 text-sm leading-6 text-content-secondary">
+        {ai.summary}
+      </p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <AIList title="Strengths" items={ai.strengths} tone="positive" />
+        <AIList title="Gaps" items={ai.gaps} tone="negative" />
+      </div>
+
+      <AIBlock title="Main responsibilities" items={ai.responsibilities} />
+      <AIBlock title="Resume opportunities" items={ai.resumeSuggestions} />
+      <AIBlock title="Interview topics" items={ai.interviewTopics} chips />
+    </section>
+  );
+}
+
+function AIList({ title, items, tone }: { title: string; items: string[]; tone: "positive" | "negative" }) {
+  if (!items.length) return null;
+  const dot = tone === "positive" ? "bg-status-green" : "bg-status-rose";
+  return (
+    <div>
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-content-tertiary">{title}</h4>
+      <ul className="space-y-1.5">
+        {items.map((item) => (
+          <li key={item} className="flex items-start gap-2 text-sm text-content-secondary">
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AIBlock({ title, items, chips = false }: { title: string; items: string[]; chips?: boolean }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-content-tertiary">{title}</h4>
+      {chips ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center rounded-full border border-hairline bg-surface-inset px-3 py-1 text-sm text-content-secondary"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item} className="rounded-md border border-hairline bg-surface-inset p-3 text-sm leading-6 text-content-secondary">
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -211,27 +337,19 @@ function SkillList({
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
-        <span className={matched ? "text-emerald-400 light:text-emerald-600" : "text-rose"}>{title}</span>
-        <span className="text-xs text-slate-500">({items.length})</span>
+        <span className={matched ? "text-status-green" : "text-status-rose"}>{title}</span>
+        <span className="text-xs text-content-tertiary">({items.length})</span>
       </h3>
       {items.length ? (
         <div className="flex flex-wrap gap-2">
           {items.map((item) => (
-            <span
-              key={item}
-              className={
-                matched
-                  ? "inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-300 light:border-emerald-300 light:bg-emerald-50 light:text-emerald-700"
-                  : "inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-3 py-1 text-sm text-rose"
-              }
-            >
-              {matched ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+            <SkillBadge key={item} tone={matched ? "matched" : "missing"}>
               {item}
-            </span>
+            </SkillBadge>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">{empty}</p>
+        <p className="text-sm text-content-tertiary">{empty}</p>
       )}
     </div>
   );

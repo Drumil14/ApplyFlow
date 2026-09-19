@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 import { FileText, Loader2, Plus, Trophy } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo } from "react";
 import { toast } from "sonner";
+import { useCreateResume, useResumes } from "@/hooks/use-resumes";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -12,38 +13,32 @@ import { Input, Textarea } from "@/components/ui/Input";
 import type { Resume } from "@/types/app";
 
 export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) {
-  const [resumes, setResumes] = useState(initialResumes);
-  const [loading, setLoading] = useState(false);
+  const { data: resumes = [] } = useResumes(initialResumes);
+  const createResume = useCreateResume();
+  const loading = createResume.isPending;
 
   const best = useMemo(() => [...resumes].sort((a, b) => b.score - a.score)[0], [resumes]);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true);
-    const form = new FormData(event.currentTarget);
-    try {
-      const response = await fetch("/api/resumes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.get("title"),
-          versionTag: form.get("versionTag"),
-          fileName: form.get("fileName"),
-          targetRole: form.get("targetRole"),
-          contentText: form.get("contentText")
-        })
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.message ?? "Could not add resume.");
-      if (!data?.resume) throw new Error("Could not add resume.");
-      setResumes((current) => [data.resume, ...current]);
-      toast.success("Resume version added");
-      event.currentTarget.reset();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
+    createResume.mutate(
+      {
+        title: form.get("title"),
+        versionTag: form.get("versionTag"),
+        fileName: form.get("fileName"),
+        targetRole: form.get("targetRole"),
+        contentText: form.get("contentText")
+      },
+      {
+        onSuccess: () => {
+          toast.success("Resume version added");
+          formEl.reset();
+        },
+        onError: (error) => toast.error(error.message || "Something went wrong.")
+      }
+    );
   };
 
   return (
@@ -65,7 +60,7 @@ export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) 
             <label className="block text-sm">
               Resume text
               <Textarea className="mt-2 min-h-[10rem]" name="contentText" placeholder="Paste your resume text here so ApplyFlow can extract its skills for match scoring..." />
-              <span className="mt-1 block text-xs text-slate-500">Used once at upload to detect skills. No files leave your browser session.</span>
+              <span className="mt-1 block text-xs text-slate-500">Saved to your ApplyFlow workspace and used to detect skills for matching.</span>
             </label>
             <Button className="w-full" disabled={loading} icon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}>Add resume</Button>
           </form>

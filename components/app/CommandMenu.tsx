@@ -3,8 +3,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { BarChart3, Brain, Briefcase, Columns3, FileText, Home, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useCommandMenu } from "@/hooks/use-command-menu";
 import { useCommandStore } from "@/stores/useCommandStore";
 
 const commands = [
@@ -19,50 +20,26 @@ const commands = [
 export function CommandMenu() {
   const { open, setOpen, toggle } = useCommandStore();
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(0);
-  const filtered = useMemo(
-    () => commands.filter((command) => command.label.toLowerCase().includes(query.toLowerCase())),
-    [query]
-  );
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        toggle();
-      }
-      if (event.key === "Escape") setOpen(false);
-      if (!open) return;
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setSelected((current) => Math.min(current + 1, filtered.length - 1));
-      }
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setSelected((current) => Math.max(current - 1, 0));
-      }
-      if (event.key === "Enter" && filtered[selected]) {
-        event.preventDefault();
-        router.push(filtered[selected].href);
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [filtered, open, router, selected, setOpen, toggle]);
+  // Return focus to whatever was focused before the palette opened.
+  const previousFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (open) {
-      setQuery("");
-      setSelected(0);
+      previousFocus.current = document.activeElement as HTMLElement | null;
+    } else {
+      previousFocus.current?.focus?.();
     }
   }, [open]);
 
-  useEffect(() => {
-    setSelected(0);
-  }, [query]);
+  const { query, setQuery, selected, filtered } = useCommandMenu(commands, {
+    open,
+    onToggle: toggle,
+    onClose: () => setOpen(false),
+    onSelect: (command) => {
+      router.push(command.href);
+      setOpen(false);
+    }
+  });
 
   return (
     <AnimatePresence>
@@ -75,6 +52,9 @@ export function CommandMenu() {
           onMouseDown={() => setOpen(false)}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command menu"
             className="mx-auto mt-24 max-w-xl overflow-hidden rounded-lg border border-white/10 bg-[#0b0f17]/95 shadow-panel light:border-slate-200 light:bg-white"
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -85,6 +65,7 @@ export function CommandMenu() {
               <Search className="h-4 w-4 text-slate-500" />
               <input
                 autoFocus
+                aria-label="Search commands"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search commands..."
