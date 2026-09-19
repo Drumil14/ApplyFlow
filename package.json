@@ -26,6 +26,7 @@
     "@auth/prisma-adapter": "^2.10.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@prisma/client": "^6.7.0",
+    "@tanstack/react-query": "^5.103.1",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.9.2",

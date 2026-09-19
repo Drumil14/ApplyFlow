@@ -4,6 +4,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, LinkIcon, Loader2, Plus, Trash2, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  useApplications,
+  useCreateApplication,
+  useDeleteApplication,
+  useUpdateApplication
+} from "@/hooks/use-applications";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -53,10 +59,13 @@ export function ApplicationManager({
   initialApplications: Application[];
   resumes: Resume[];
 }) {
-  const [applications, setApplications] = useState(initialApplications);
+  const { data: applications = [] } = useApplications(initialApplications);
+  const createApplication = useCreateApplication();
+  const updateApplication = useUpdateApplication();
+  const deleteApplication = useDeleteApplication();
   const [editing, setEditing] = useState<Application | null>(null);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const loading = createApplication.isPending || updateApplication.isPending;
 
   const counts = useMemo(
     () => statuses.map((status) => ({ status, count: applications.filter((app) => app.status === status).length })),
@@ -68,16 +77,11 @@ export function ApplicationManager({
     setOpen(true);
   };
 
-  const remove = async (application: Application) => {
-    setApplications((current) => current.filter((item) => item.id !== application.id));
-    try {
-      const response = await fetch(`/api/applications/${application.id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Could not delete application.");
-      toast.success(`${application.company} removed`);
-    } catch {
-      setApplications((current) => [application, ...current]);
-      toast.error("Could not delete application.");
-    }
+  const remove = (application: Application) => {
+    deleteApplication.mutate(application.id, {
+      onSuccess: () => toast.success(`${application.company} removed`),
+      onError: () => toast.error("Could not delete application.")
+    });
   };
 
   return (
@@ -152,28 +156,17 @@ export function ApplicationManager({
         resumes={resumes}
         loading={loading}
         onClose={() => setOpen(false)}
-        onSubmit={async (payload) => {
-          setLoading(true);
-          try {
-            const response = await fetch(editing ? `/api/applications/${editing.id}` : "/api/applications", {
-              method: editing ? "PATCH" : "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-            const data = await response.json().catch(() => null);
-            if (!response.ok) throw new Error(data?.message ?? "Application could not be saved.");
-            if (!data?.application) throw new Error("Application could not be saved.");
-            setApplications((current) =>
-              editing
-                ? current.map((app) => (app.id === data.application.id ? data.application : app))
-                : [data.application, ...current]
-            );
+        onSubmit={(payload) => {
+          const onSuccess = () => {
             toast.success(editing ? "Application updated" : "Application created");
             setOpen(false);
-          } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Something went wrong.");
-          } finally {
-            setLoading(false);
+          };
+          const onError = (error: Error) => toast.error(error.message || "Something went wrong.");
+
+          if (editing) {
+            updateApplication.mutate({ id: editing.id, payload }, { onSuccess, onError });
+          } else {
+            createApplication.mutate(payload, { onSuccess, onError });
           }
         }}
       />
@@ -194,7 +187,7 @@ function ApplicationModal({
   resumes: Resume[];
   loading: boolean;
   onClose: () => void;
-  onSubmit: (payload: Record<string, unknown>) => Promise<void>;
+  onSubmit: (payload: Record<string, unknown>) => void;
 }) {
   const values: FormState = application
     ? {
