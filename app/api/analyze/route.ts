@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
+import { analyzeJob } from "@/lib/ai/analyze-job";
 import { prisma } from "@/lib/prisma";
-import { scoreMatch } from "@/lib/scoring";
 import { requireUser } from "@/lib/session";
-import { extractSkills } from "@/lib/skills";
 
-const seniorityFor = (description: string) => {
-  const text = description.toLowerCase();
-  if (text.includes("staff")) return "Staff";
-  if (text.includes("senior")) return "Senior";
-  if (text.includes("intern")) return "Intern";
-  if (text.includes("junior") || text.includes("new grad")) return "Junior";
-  return "Mid-level";
-};
+// Uses the Anthropic SDK, which needs the Node.js runtime (not edge).
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const { userId, response } = await requireUser();
@@ -31,57 +24,54 @@ export async function POST(request: Request) {
 
     const resume = await prisma.resumeVersion.findFirst({
       where: { id: resumeId, userId: userId as string },
-      select: { id: true, title: true, skills: true }
+      select: { id: true, title: true, skills: true, contentText: true }
     });
 
     if (!resume) {
       return NextResponse.json({ message: "Resume not found." }, { status: 404 });
     }
 
-    const jdSkills = extractSkills(jobDescription);
     const resumeSkills = (resume.skills as string[]) ?? [];
-    const { score, matched, missing } = scoreMatch(jdSkills, resumeSkills);
-    const seniorityLevel = seniorityFor(jobDescription);
-
-    const resumeSuggestions = missing.map(
-      (skill) => `Job asks for ${skill} — not found in this resume version.`
-    );
-
-    const analysis = {
-      matchScore: score,
-      matched,
-      missing,
-      requiredSkills: jdSkills,
-      technologies: matched,
-      seniorityLevel,
-      keywords: resumeSkills,
-      resumeSuggestions
-    };
-
-    await prisma.jobAnalysis.create({
-      data: {
-        userId: userId as string,
-        title: resume.title,
-        sourceText: jobDescription,
-        requiredSkills: analysis.requiredSkills,
-        technologies: analysis.technologies,
-        seniorityLevel: analysis.seniorityLevel,
-        keywords: analysis.keywords,
-        resumeSuggestions: analysis.resumeSuggestions,
-        matchScore: analysis.matchScore
-      }
+    const analysis = await analyzeJob({
+      jobDescription,
+      resumeSkills,
+      resumeText: resume.contentText
     });
 
-    await prisma.activity.create({
-      data: {
-        userId: userId as string,
-        type: "ANALYSIS_CREATED",
-        message: `Analyzed a ${seniorityLevel.toLowerCase()} role with a ${score}% match score.`
-      }
-    });
+    // Persist the deterministic record (AI persistence lands with analysis
+    // history in a later phase). Keep this best-effort so a DB hiccup never
+    // fails an otherwise-successful analysis.
+    try {
+      await prisma.jobAnalysis.create({
+        data: {
+          userId: userId as string,
+          title: analysis.ai?.roleTitle ?? resume.title,
+          sourceText: jobDescription,
+          requiredSkills: analysis.requiredSkills,
+          technologies: analysis.technologies,
+          seniorityLevel: analysis.seniorityLevel,
+          keywords: analysis.keywords,
+          resumeSuggestions: analysis.resumeSuggestions,
+          matchScore: analysis.matchScore
+        }
+      });
+
+      await prisma.activity.create({
+        data: {
+          userId: userId as string,
+          type: "ANALYSIS_CREATED",
+          message: `Analyzed a ${analysis.seniorityLevel.toLowerCase()} role with a ${analysis.matchScore}% match score.`
+        }
+      });
+    } catch (persistError) {
+      console.error("[analyze] failed to persist analysis:", persistError);
+    }
 
     return NextResponse.json({ analysis });
   } catch {
-    return NextResponse.json({ message: "We could not analyze this role right now. Try again in a moment." }, { status: 500 });
+    return NextResponse.json(
+      { message: "We could not analyze this role right now. Try again in a moment." },
+      { status: 500 }
+    );
   }
 }

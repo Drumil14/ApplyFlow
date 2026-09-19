@@ -66,6 +66,21 @@ export type Activity = {
   } | null;
 };
 
+export type AiStatus = "ok" | "unconfigured" | "failed";
+
+export type JobAIAnalysis = {
+  roleTitle: string;
+  seniority: string;
+  summary: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  responsibilities: string[];
+  strengths: string[];
+  gaps: string[];
+  resumeSuggestions: string[];
+  interviewTopics: string[];
+};
+
 export type AnalysisResult = {
   requiredSkills: string[];
   technologies: string[];
@@ -75,4 +90,6 @@ export type AnalysisResult = {
   matchScore: number;
   matched: string[];
   missing: string[];
+  ai: JobAIAnalysis | null;
+  aiStatus: AiStatus;
 };

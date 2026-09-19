@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, Check, FileText, Loader2, ScanSearch, X } from "lucide-react";
+import { AlertTriangle, Check, FileText, Loader2, ScanSearch, Sparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -58,7 +58,8 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
         <p className="text-sm font-medium text-brand">Match analyzer</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Score a role against your resume</h1>
         <p className="mt-2 text-sm text-slate-400 light:text-slate-600">
-          Local, deterministic skill matching — no external services. Pick a resume version and paste a job description.
+          A transparent, deterministic skill match — plus optional AI insights when a model is configured. Pick a resume
+          version and paste a job description.
         </p>
       </div>
 
@@ -178,6 +179,8 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                   </div>
                 </div>
               ) : null}
+
+              <AIInsights result={result} />
             </motion.div>
           ) : (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
@@ -192,6 +195,102 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
           )}
         </Card>
       </div>
+    </div>
+  );
+}
+
+function AIInsights({ result }: { result: AnalysisResult }) {
+  const { ai, aiStatus } = result;
+
+  if (aiStatus !== "ok" || !ai) {
+    const message =
+      aiStatus === "failed"
+        ? "AI insights are temporarily unavailable. Your deterministic match above is fully accurate."
+        : "AI insights aren't configured. Add an API key to enable qualitative analysis — the deterministic match above works either way.";
+    return (
+      <section aria-labelledby="ai-insights-heading" className="border-t border-hairline pt-6">
+        <div className="flex items-start gap-3 rounded-lg border border-hairline bg-surface-inset p-4">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+          <div>
+            <h3 id="ai-insights-heading" className="text-sm font-medium text-content">
+              AI insights
+            </h3>
+            <p className="mt-1 text-sm text-content-secondary">{message}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="ai-insights-heading" className="space-y-5 border-t border-hairline pt-6">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
+        <h3 id="ai-insights-heading" className="text-sm font-medium">
+          AI insights
+        </h3>
+        <span className="text-xs text-content-tertiary">
+          {ai.roleTitle} · {ai.seniority}
+        </span>
+      </div>
+
+      <p className="text-sm leading-6 text-content-secondary">{ai.summary}</p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <AIList title="Strengths" items={ai.strengths} tone="positive" />
+        <AIList title="Gaps" items={ai.gaps} tone="negative" />
+      </div>
+
+      <AIBlock title="Main responsibilities" items={ai.responsibilities} />
+      <AIBlock title="Resume opportunities" items={ai.resumeSuggestions} />
+      <AIBlock title="Interview topics" items={ai.interviewTopics} chips />
+    </section>
+  );
+}
+
+function AIList({ title, items, tone }: { title: string; items: string[]; tone: "positive" | "negative" }) {
+  if (!items.length) return null;
+  const dot = tone === "positive" ? "bg-status-green" : "bg-status-rose";
+  return (
+    <div>
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-content-tertiary">{title}</h4>
+      <ul className="space-y-1.5">
+        {items.map((item) => (
+          <li key={item} className="flex items-start gap-2 text-sm text-content-secondary">
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AIBlock({ title, items, chips = false }: { title: string; items: string[]; chips?: boolean }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-content-tertiary">{title}</h4>
+      {chips ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center rounded-full border border-hairline bg-surface-inset px-3 py-1 text-sm text-content-secondary"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item} className="rounded-md border border-hairline bg-surface-inset p-3 text-sm leading-6 text-content-secondary">
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
