@@ -66,7 +66,20 @@ export type Activity = {
   } | null;
 };
 
-export type AiStatus = "ok" | "unconfigured" | "failed";
+export type AiStatus =
+  | "ok"
+  | "unconfigured"
+  | "failed"
+  | "rate_limited"
+  | "rate_limit_unavailable";
+
+/** Non-sensitive rate-limit metadata surfaced to the UI (no identifiers). */
+export type AiRateLimitInfo = {
+  limit: number;
+  remaining: number;
+  /** Unix timestamp (ms) when the window resets. */
+  reset: number;
+};
 
 export type JobAIAnalysis = {
   roleTitle: string;
@@ -102,4 +115,6 @@ export type AnalysisResult = {
   missing: string[];
   ai: JobAIAnalysis | null;
   aiStatus: AiStatus;
+  /** Present only when the AI layer was rate limited. */
+  aiRateLimit?: AiRateLimitInfo | null;
 };

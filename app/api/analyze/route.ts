@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { analyzeJob } from "@/lib/ai/analyze-job";
+import { analyzeJob, type AiGateDecision } from "@/lib/ai/analyze-job";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { checkAIAnalysisLimit } from "@/lib/rate-limit";
+import { getRateLimitIdentifier, requireUser } from "@/lib/session";
 
 // Uses the Anthropic SDK, which needs the Node.js runtime (not edge).
 export const runtime = "nodejs";
@@ -32,10 +33,31 @@ export async function POST(request: Request) {
     }
 
     const resumeSkills = (resume.skills as string[]) ?? [];
+
+    // Rate-limit only the paid AI stage. The gate is consulted inside analyzeJob
+    // *after* validation and *only* when an AI provider is configured, so an
+    // invalid request or a provider-less deployment never consumes quota. The
+    // deterministic match below is always returned regardless of the outcome.
+    const identifier = await getRateLimitIdentifier(request);
+    const aiGate = async (): Promise<AiGateDecision> => {
+      const result = await checkAIAnalysisLimit(identifier);
+      if (result.status === "ok") return { allow: true };
+      if (result.status === "unavailable") {
+        // Fail closed: never make an unrestricted Anthropic call.
+        return { allow: false, status: "rate_limit_unavailable" };
+      }
+      return {
+        allow: false,
+        status: "rate_limited",
+        rateLimit: { limit: result.limit, remaining: result.remaining, reset: result.reset }
+      };
+    };
+
     const analysis = await analyzeJob({
       jobDescription,
       resumeSkills,
-      resumeText: resume.contentText
+      resumeText: resume.contentText,
+      aiGate
     });
 
     // Persist the deterministic record (AI persistence lands with analysis

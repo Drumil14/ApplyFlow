@@ -51,6 +51,13 @@ const withAi: AnalysisResult = {
 
 const aiFailed: AnalysisResult = { ...deterministic, ai: null, aiStatus: "failed" };
 
+const aiRateLimited: AnalysisResult = {
+  ...deterministic,
+  ai: null,
+  aiStatus: "rate_limited",
+  aiRateLimit: { limit: 5, remaining: 0, reset: Date.now() + 3 * 60 * 60 * 1000 }
+};
+
 function renderWorkspace() {
   const client = new QueryClient({
     // staleTime Infinity so the resumes query never background-refetches over the
@@ -106,6 +113,21 @@ describe("AnalyzerWorkspace", () => {
     expect(await screen.findByText("82")).toBeInTheDocument();
     // ...and the AI panel degrades gracefully.
     expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
+  });
+
+  it("shows a calm rate-limit message while keeping the deterministic match", async () => {
+    mockFetchOnce({ analysis: aiRateLimited });
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await submitAnalysis(user);
+
+    // Deterministic score is untouched...
+    expect(await screen.findByText("82")).toBeInTheDocument();
+    // ...and the AI panel shows the calm limit copy (not a red error state).
+    expect(screen.getByText(/daily ai insights limit reached/i)).toBeInTheDocument();
+    expect(screen.getByText(/resets in about 3 hours/i)).toBeInTheDocument();
+    expect(screen.queryByText(/analysis needs another pass/i)).not.toBeInTheDocument();
   });
 
   it("shows an error state when the request fails", async () => {

@@ -201,14 +201,37 @@ export function AnalyzerWorkspace({ initialResumes }: { initialResumes: Resume[]
   );
 }
 
+/** Turn a reset timestamp (unix ms) into a calm, human-friendly hint. */
+function resetHint(reset: number | undefined): string {
+  if (!reset) return "";
+  const ms = reset - Date.now();
+  if (ms <= 0) return " You can try again now.";
+  const hours = Math.round(ms / (1000 * 60 * 60));
+  if (hours >= 1) return ` Resets in about ${hours} hour${hours === 1 ? "" : "s"}.`;
+  const minutes = Math.max(1, Math.round(ms / (1000 * 60)));
+  return ` Resets in about ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+}
+
+function aiInsightsMessage(result: AnalysisResult): string {
+  switch (result.aiStatus) {
+    case "rate_limited":
+      return `Daily AI insights limit reached. Your skill match is still available. Try again tomorrow.${resetHint(
+        result.aiRateLimit?.reset
+      )}`;
+    case "rate_limit_unavailable":
+      return "AI insights are temporarily unavailable. Your skill match is still available.";
+    case "failed":
+      return "AI insights are temporarily unavailable. Your deterministic match above is fully accurate.";
+    default:
+      return "AI insights aren't configured. Add an API key to enable qualitative analysis — the deterministic match above works either way.";
+  }
+}
+
 function AIInsights({ result }: { result: AnalysisResult }) {
   const { ai, aiStatus } = result;
 
   if (aiStatus !== "ok" || !ai) {
-    const message =
-      aiStatus === "failed"
-        ? "AI insights are temporarily unavailable. Your deterministic match above is fully accurate."
-        : "AI insights aren't configured. Add an API key to enable qualitative analysis — the deterministic match above works either way.";
+    const message = aiInsightsMessage(result);
     return (
       <section aria-labelledby="ai-insights-heading" className="border-t border-hairline pt-6">
         <div className="flex items-start gap-3 rounded-lg border border-hairline bg-surface-inset p-4">
