@@ -1,13 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, Check, FileText, Loader2, ScanSearch, Sparkles, X } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, ScanSearch, Sparkles } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { useAnalyzeJob } from "@/hooks/use-analysis";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { MatchScore } from "@/components/ui/MatchScore";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SkillBadge } from "@/components/ui/SkillBadge";
 import { Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import type { AnalysisResult } from "@/types/app";
@@ -47,7 +49,7 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
       <div>
         <p className="text-sm font-medium text-brand">Match analyzer</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Score a role against your resume</h1>
-        <p className="mt-2 text-sm text-slate-400 light:text-slate-600">
+        <p className="mt-2 text-sm text-content-secondary">
           A transparent, deterministic skill match — plus optional AI insights when a model is configured. Pick a resume
           version and paste a job description.
         </p>
@@ -117,11 +119,11 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
             </div>
           ) : error ? (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-rose/25 bg-rose/10 p-4 text-rose">
+              <div className="rounded-full border border-status-rose/30 bg-status-rose/10 p-4 text-status-rose">
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <h2 className="mt-5 text-lg font-semibold">Analysis needs another pass</h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{error}</p>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-content-secondary">{error}</p>
               <Button className="mt-5" variant="secondary" onClick={() => analyzeJob.reset()}>
                 Try again
               </Button>
@@ -131,14 +133,11 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Role match</h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-content-secondary">
                     {result.matched.length} of {result.requiredSkills.length} required skills present · {result.seniorityLevel} signal
                   </p>
                 </div>
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-brand/25 bg-brand/10">
-                  <span className="text-3xl font-semibold text-brand">{result.matchScore}</span>
-                  <span className="mt-7 text-xs text-brand">%</span>
-                </div>
+                <MatchScore score={result.matchScore} />
               </div>
 
               <SkillList
@@ -161,7 +160,7 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                     {result.resumeSuggestions.map((suggestion) => (
                       <div
                         key={suggestion}
-                        className="rounded-md border border-white/10 bg-white/[0.035] p-3 text-sm leading-6 text-slate-300 light:border-slate-200 light:bg-slate-50 light:text-slate-700"
+                        className="rounded-md border border-hairline bg-surface-inset p-3 text-sm leading-6 text-content-secondary"
                       >
                         {suggestion}
                       </div>
@@ -174,11 +173,11 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
             </motion.div>
           ) : (
             <div className="flex min-h-[34rem] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-white/10 bg-white/[0.06] p-4 text-brand light:border-slate-200 light:bg-slate-50">
+              <div className="rounded-full border border-hairline bg-surface-inset p-4 text-accent">
                 <ScanSearch className="h-6 w-6" />
               </div>
               <h2 className="mt-5 text-lg font-semibold">Ready when you paste a role</h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-sm text-sm leading-6 text-content-secondary">
                 ApplyFlow compares the job&apos;s skills against your selected resume version and shows exactly what matches and what&apos;s missing.
               </p>
             </div>
@@ -300,27 +299,19 @@ function SkillList({
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
-        <span className={matched ? "text-emerald-400 light:text-emerald-600" : "text-rose"}>{title}</span>
-        <span className="text-xs text-slate-500">({items.length})</span>
+        <span className={matched ? "text-status-green" : "text-status-rose"}>{title}</span>
+        <span className="text-xs text-content-tertiary">({items.length})</span>
       </h3>
       {items.length ? (
         <div className="flex flex-wrap gap-2">
           {items.map((item) => (
-            <span
-              key={item}
-              className={
-                matched
-                  ? "inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-300 light:border-emerald-300 light:bg-emerald-50 light:text-emerald-700"
-                  : "inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-3 py-1 text-sm text-rose"
-              }
-            >
-              {matched ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+            <SkillBadge key={item} tone={matched ? "matched" : "missing"}>
               {item}
-            </span>
+            </SkillBadge>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">{empty}</p>
+        <p className="text-sm text-content-tertiary">{empty}</p>
       )}
     </div>
   );
