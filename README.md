@@ -1,112 +1,108 @@
 # ApplyFlow
 
-**An AI-assisted job application workspace built around transparent matching, structured insights, and production-quality frontend architecture.**
+### AI-assisted job application tracking with transparent resume matching and structured job insights.
 
-ApplyFlow helps users manage applications, compare job descriptions against different resume versions, and understand where their experience aligns with a role.
+ApplyFlow helps job seekers manage applications, compare job descriptions against different resume versions, and understand where their experience aligns with a role.
 
-Instead of hiding everything behind an AI-generated score, ApplyFlow separates:
+Instead of hiding everything behind an AI-generated score, ApplyFlow separates **deterministic skill matching** from **qualitative AI analysis**, so users can see what is actually driving the result.
 
-- deterministic skill matching
-- qualitative AI analysis
-- resume evidence
-- actionable improvement opportunities
-
-Built with Next.js, React, TypeScript, TanStack Query, Prisma, PostgreSQL, Anthropic, and Storybook.
+[**Live Demo →**](https://apply-flow-orcin.vercel.app) · [**GitHub →**](https://github.com/Drumil14/ApplyFlow) · [**Portfolio →**](https://drumilmistry.netlify.app/)
 
 ---
 
-## Why I built it
+## Overview
 
-Job-search tools often collapse everything into a vague “AI match score.”
+Job-search tools often return a vague AI-generated match percentage without explaining where it came from.
 
-I wanted ApplyFlow to be more transparent.
+I wanted ApplyFlow to work differently.
 
-The core matcher is deterministic and explainable: it shows exactly which skills are present and missing.
+The primary match score is calculated deterministically from the resume and job description. Users can see:
 
-AI is layered on top to provide qualitative context such as:
+- matched skills
+- missing skills
+- seniority signals
+- resume improvement opportunities
 
-- strengths supported by the resume
-- gaps not explicitly demonstrated
-- role responsibilities
-- resume opportunities
-- likely interview topics
+Anthropic is then used as a second layer to provide qualitative context such as strengths, gaps, responsibilities, and interview topics.
 
-If the AI layer is unavailable, the core product still works.
+If the AI layer is unavailable, the core matching experience continues to work.
 
 ---
 
-## Core features
+## Features
 
 ### Resume-to-job matching
 
-Select a saved resume, paste a job description, and receive:
+Select a saved resume, paste a job description, and receive a transparent skill match.
 
-- deterministic skill match
+The analysis includes:
+
+- skill match percentage
 - matched skills
 - missing skills
 - seniority signal
 - resume suggestions
 
-The deterministic matcher remains independent from the LLM.
+The percentage is calculated independently from the LLM.
 
 ---
 
 ### Structured AI insights
 
-ApplyFlow integrates Anthropic for qualitative job analysis.
+ApplyFlow integrates the Anthropic API for deeper qualitative analysis.
 
-The model returns structured output instead of free-form chat responses, including:
+AI insights include:
 
 - role summary
-- strengths
-- gaps
-- main responsibilities
+- resume-supported strengths
+- gaps not explicitly demonstrated
+- key responsibilities
 - resume opportunities
 - interview topics
 
-Responses are validated with Zod before reaching the UI.
+AI responses are returned as structured data and validated with Zod before being rendered in the interface.
 
-The AI layer is designed to avoid inventing experience or encouraging users to claim skills they do not have.
+The AI layer is designed to avoid inventing experience or suggesting that users claim skills they do not actually have.
 
 ---
 
-### Resume upload from device
+### Upload a resume from your device
 
 Users can add a resume directly from the Analyzer.
 
-Supported flows:
+Two input methods are supported:
 
-- upload a PDF
-- paste resume text manually
+- Upload PDF
+- Paste resume text
 
-PDF text extraction happens in the browser using `pdfjs-dist`.
+PDF text extraction happens entirely in the browser using `pdfjs-dist`.
 
-The raw PDF file is never stored or uploaded by ApplyFlow.
+The raw PDF file is not stored or uploaded by ApplyFlow.
 
-Only the extracted resume text and resume metadata are persisted to the user's workspace.
+Only the extracted resume text and associated metadata are sent to the application's API and persisted for future matching.
 
 ---
 
 ### Multiple resume versions
 
-Users can maintain multiple versions of a resume and compare them against different roles.
+Users can maintain multiple resume versions for different types of roles.
 
 Each resume can include:
 
 - title
-- version
+- version tag
 - target role
 - source filename
 - extracted resume text
 - detected skills
 
-A newly created resume is immediately added to the UI and automatically selected without requiring a refresh.
+After a new resume is created, TanStack Query updates the cache and automatically selects it in the Analyzer without requiring a page refresh.
 
 ---
 
 ### Application tracking
 
-Applications can be managed through a Kanban-style workflow.
+Applications can be organized through a Kanban-style workflow.
 
 Stages include:
 
@@ -117,51 +113,72 @@ Stages include:
 - Offer
 - Rejected
 
-Mutations use optimistic updates so interactions feel immediate, with rollback behavior if a server request fails.
+Application mutations use optimistic updates so the UI responds immediately.
+
+If a request fails, the previous state is restored.
+
+---
+
+### Resume management
+
+ApplyFlow provides a dedicated workspace for maintaining resume versions and viewing the skills detected from each resume.
+
+This makes it easier to compare different resumes against different job descriptions instead of relying on one generic resume for every application.
 
 ---
 
 ### Analysis history
 
-Previous analyses are available inside the product so users can revisit earlier job matches instead of starting from scratch every time.
+Previous match records can be revisited from the Analyzer, making it easier to review earlier role comparisons.
 
 ---
 
-## AI cost protection
+### Job application activity
 
-The public AI endpoint is protected using Upstash Redis and `@upstash/ratelimit`.
+ApplyFlow tracks application activity and surfaces it throughout the dashboard.
 
-AI analysis is limited to:
-
-**5 AI analyses per identifier per 24-hour fixed window**
-
-Authenticated users are identified by their user ID.
-
-If no authenticated user is available, the server falls back to a server-derived IP identifier.
-
-Identifiers are hashed before being used as Redis keys.
-
-If the rate limit is reached:
-
-- Anthropic is not called
-- the deterministic matcher continues working
-- the UI shows a non-blocking rate-limit message
-
-If Redis is unavailable or misconfigured, ApplyFlow fails closed and does not make unrestricted paid AI requests.
+Users can review their job-search progress without manually keeping separate notes or spreadsheets.
 
 ---
 
-## Frontend architecture
+## AI architecture
 
-ApplyFlow V2 introduced a dedicated server-state layer using TanStack Query.
+ApplyFlow deliberately separates deterministic analysis from AI analysis.
 
-Reusable hooks handle application data, resumes, activity, analysis history, and mutations.
-
-Examples include:
-
-```ts
-useApplications()
-useResumes()
-useActivity()
-useAnalysis()
-useCreateResume()
+```text
+Resume + Job Description
+          │
+          ▼
+   Request Validation
+          │
+          ▼
+ Deterministic Matcher
+          │
+          ├──────────────► Skill Match
+          │                Matched Skills
+          │                Missing Skills
+          │                Seniority
+          │
+          ▼
+  AI Eligibility Check
+          │
+          ▼
+     Rate Limiter
+          │
+     ┌────┴────┐
+     │         │
+  Allowed    Blocked
+     │         │
+     ▼         ▼
+ Anthropic    Skip AI
+     │         │
+     ▼         │
+Structured    │
+Response      │
+     │         │
+     ▼         │
+Zod Validation│
+     │         │
+     └────┬────┘
+          ▼
+       UI Result
