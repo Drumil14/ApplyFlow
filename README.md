@@ -182,3 +182,416 @@ Zod Validation│
      └────┬────┘
           ▼
        UI Result
+
+This architecture keeps the product usable even when the external AI service is unavailable.
+
+AI cost protection
+
+Because Anthropic is a paid API, public AI requests are protected using Upstash Redis and @upstash/ratelimit.
+
+The current policy is:
+
+5 AI analyses per identifier per 24-hour fixed window
+
+When possible, authenticated users are identified by their user ID.
+
+Otherwise, the server falls back to an IP-derived identifier.
+
+Identifiers are hashed before being stored as Redis keys.
+
+No resume text, job description content, or other personal content is stored in Redis.
+
+When the limit is reached
+
+Anthropic is not called.
+
+The deterministic matcher continues to work normally and the user receives a non-blocking message explaining that the daily AI limit has been reached.
+
+If Redis is unavailable
+
+ApplyFlow fails closed.
+
+The deterministic matcher continues working, but the paid Anthropic request is skipped rather than allowing unrestricted AI usage.
+
+Frontend architecture
+
+ApplyFlow uses TanStack Query as its client-side server-state layer.
+
+Reusable hooks manage data fetching, caching, and mutations across the application.
+
+Examples include:
+
+useApplications()
+useResumes()
+useActivity()
+useAnalysis()
+useCreateResume()
+
+Server-rendered data is used as initial query data, allowing the application to keep the benefits of Next.js server rendering while gaining predictable client-side caching and mutations.
+
+Optimistic UI
+
+Application interactions are designed to feel immediate.
+
+For example, moving an application through the Kanban follows this flow:
+
+User moves application
+        │
+        ▼
+Update query cache immediately
+        │
+        ▼
+Render updated UI
+        │
+        ▼
+Send request to server
+        │
+   ┌────┴────┐
+   │         │
+Success    Failure
+   │         │
+ Keep     Restore
+ State    Previous State
+
+This pattern is also used where appropriate for other application mutations.
+
+Resume upload architecture
+User selects PDF
+        │
+        ▼
+Validate file
+PDF only · max 5 MB
+        │
+        ▼
+Load pdfjs-dist
+        │
+        ▼
+Extract text in browser
+        │
+        ▼
+Preview extracted content
+        │
+        ▼
+Save resume
+        │
+        ▼
+POST /api/resumes
+        │
+        ▼
+Prisma + PostgreSQL
+        │
+        ▼
+Update TanStack Query cache
+        │
+        ▼
+Automatically select resume
+
+pdfjs-dist is loaded only when PDF extraction is actually needed, keeping the initial Analyzer bundle smaller.
+
+Scanned PDFs without selectable text fall back to the manual paste workflow.
+
+Design system
+
+ApplyFlow uses reusable UI primitives and semantic design tokens rather than treating every screen as a separate design.
+
+The component system includes patterns for:
+
+buttons
+cards
+dialogs
+form controls
+skill badges
+match scores
+status indicators
+empty states
+feedback states
+
+Reusable components are also documented and tested through Storybook.
+
+Accessibility
+
+Accessibility improvements include:
+
+keyboard-accessible interactions
+labelled dialogs and inputs
+focus management
+focus restoration
+skip navigation
+visible focus states
+aria-live feedback for dynamic interactions
+reduced-motion support
+keyboard-accessible command interactions
+
+The goal is to build interaction patterns that do not depend exclusively on mouse input.
+
+Performance
+
+Performance work focuses on avoiding unnecessary client-side JavaScript.
+
+Examples include:
+
+route-scoped heavy dependencies
+lazy-loaded PDF parsing
+code-split Recharts usage
+server-seeded TanStack Query data
+PDF processing only when requested
+avoiding speculative memoization where it is not needed
+Testing
+
+ApplyFlow currently has:
+
+59 automated tests
+
+The test suite covers areas including:
+
+deterministic scoring
+skill extraction
+AI schema validation
+analyzer interactions
+TanStack Query hooks
+optimistic mutation rollback
+resume creation
+PDF validation
+command-menu interactions
+rate limiting
+authenticated/IP identifier selection
+AI provider fallback behavior
+missing rate-limit configuration
+rate-limited UI states
+Testing stack
+Vitest
+React Testing Library
+Testing Library User Event
+Jest DOM
+
+External services such as Upstash are mocked during automated tests.
+
+Storybook
+
+Reusable UI components are documented through Storybook.
+
+This allows component states and interaction patterns to be developed and reviewed independently from full application pages.
+
+Tech stack
+Frontend
+Next.js
+React
+TypeScript
+Tailwind CSS
+TanStack Query
+Zustand
+Framer Motion
+Recharts
+AI
+Anthropic API
+structured AI outputs
+Zod validation
+provider abstraction
+graceful degradation
+Data & authentication
+Prisma
+PostgreSQL
+NextAuth
+bcrypt
+Infrastructure
+Vercel
+Upstash Redis
+File processing
+pdfjs-dist
+Testing & tooling
+Vitest
+React Testing Library
+Storybook
+ESLint
+TypeScript
+Project architecture
+app/
+├── api/
+│   ├── analyze/
+│   ├── analyses/
+│   ├── applications/
+│   ├── resumes/
+│   ├── activity/
+│   └── auth/
+│
+├── dashboard/
+│   ├── analyzer/
+│   ├── applications/
+│   └── ...
+│
+components/
+├── dashboard/
+├── ui/
+└── ...
+│
+lib/
+├── ai/
+│   ├── provider.ts
+│   ├── anthropic.ts
+│   ├── analyze-job.ts
+│   └── schema.ts
+│
+├── api.ts
+├── pdf.ts
+├── queryKeys.ts
+├── rate-limit.ts
+├── session.ts
+└── ...
+│
+hooks/
+├── use-applications.ts
+├── use-resumes.ts
+├── use-activity.ts
+├── use-analysis.ts
+└── ...
+│
+tests/
+│
+prisma/
+└── schema.prisma
+Environment variables
+
+Create a .env.local file in the project root.
+
+DATABASE_URL=
+
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+
+ANTHROPIC_API_KEY=
+
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+Real credentials should never be committed.
+
+.env.example contains placeholders only.
+
+Running locally
+
+Clone the repository:
+
+git clone https://github.com/Drumil14/ApplyFlow.git
+
+Enter the project:
+
+cd ApplyFlow
+
+Install dependencies:
+
+npm install
+
+Start the development server:
+
+npm run dev
+
+Open:
+
+http://localhost:3000
+Validation
+
+Before production changes are merged, the project is validated with:
+
+npm run typecheck
+npm test
+npm run lint
+npm run build-storybook
+npx next build
+
+Current test result:
+
+59/59 passing
+Engineering decisions
+Why not let AI generate the match percentage?
+
+LLM-generated percentages can be difficult to explain and may vary between requests.
+
+ApplyFlow therefore calculates its primary skill match deterministically.
+
+AI is used for the part it is better suited for: qualitative interpretation.
+
+Why structured AI instead of a chatbot?
+
+ApplyFlow is a product interface, not a general-purpose chat experience.
+
+Structured responses make AI results:
+
+predictable
+type-safe
+testable
+easier to validate
+easier to render consistently
+Why validate AI responses?
+
+External model output should not automatically be trusted by the application.
+
+The Anthropic response is validated against a Zod schema before being used by the UI.
+
+Why process PDFs in the browser?
+
+ApplyFlow only needs the textual content of the resume.
+
+Processing the PDF locally means the raw document does not need to be uploaded or stored.
+
+Only extracted text and resume metadata are persisted.
+
+Why keep AI optional?
+
+A third-party AI provider should not determine whether the entire product works.
+
+The deterministic matcher remains available when:
+
+Anthropic fails
+Anthropic is not configured
+the user reaches the AI rate limit
+Redis is unavailable
+Why fail closed when rate limiting fails?
+
+The rate limiter protects a paid external API.
+
+Allowing unrestricted Anthropic calls when Redis fails would defeat that protection.
+
+Instead, ApplyFlow keeps the free deterministic functionality available while temporarily disabling AI insights.
+
+What I focused on
+
+ApplyFlow started as a job application tracker and evolved into an exercise in production-quality frontend and product engineering.
+
+The V2 work focused on:
+
+React architecture
+server-state management
+optimistic UI
+structured AI interfaces
+third-party API integration
+client-side file processing
+accessibility
+component systems
+Storybook
+frontend testing
+graceful failure states
+performance
+API cost protection
+
+The goal was not just to add more features.
+
+It was to build an interface that behaves like a product I would actually want to maintain and ship.
+
+Links
+
+Live Application
+https://apply-flow-orcin.vercel.app
+
+GitHub Repository
+https://github.com/Drumil14/ApplyFlow
+
+Portfolio
+https://drumilmistry.netlify.app/
+
+Author
+
+Drumil Mistry
+
+Frontend / Product Engineer focused on building polished interfaces where design, engineering, and AI meet.
+
+Portfolio · GitHub
