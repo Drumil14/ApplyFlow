@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Check, FileText, Loader2, ScanSearch, Sparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
+import { useAnalyzeJob } from "@/hooks/use-analysis";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -22,34 +23,23 @@ type ResumeOption = {
 };
 
 export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [resumeId, setResumeId] = useState(resumes[0]?.id ?? "");
-  const [error, setError] = useState("");
+  const analyzeJob = useAnalyzeJob();
 
-  const analyze = async (event: FormEvent<HTMLFormElement>) => {
+  const result: AnalysisResult | null = analyzeJob.data ?? null;
+  const loading = analyzeJob.isPending;
+  const error = analyzeJob.error ? analyzeJob.error.message : "";
+
+  const analyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId, jobDescription: description })
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.message ?? "Analysis failed.");
-      if (!data?.analysis) throw new Error("Analysis failed.");
-      setResult(data.analysis);
-      toast.success("Job description analyzed");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not analyze this role.";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
+    analyzeJob.mutate(
+      { resumeId, jobDescription: description },
+      {
+        onSuccess: () => toast.success("Job description analyzed"),
+        onError: (err) => toast.error(err.message || "Could not analyze this role.")
+      }
+    );
   };
 
   return (
@@ -132,7 +122,7 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
               </div>
               <h2 className="mt-5 text-lg font-semibold">Analysis needs another pass</h2>
               <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{error}</p>
-              <Button className="mt-5" variant="secondary" onClick={() => setError("")}>
+              <Button className="mt-5" variant="secondary" onClick={() => analyzeJob.reset()}>
                 Try again
               </Button>
             </div>
