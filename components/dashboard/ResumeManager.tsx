@@ -60,7 +60,7 @@ export function ResumeManager({ initialResumes }: { initialResumes: Resume[] }) 
             <label className="block text-sm">
               Resume text
               <Textarea className="mt-2 min-h-[10rem]" name="contentText" placeholder="Paste your resume text here so ApplyFlow can extract its skills for match scoring..." />
-              <span className="mt-1 block text-xs text-slate-500">Used once at upload to detect skills. No files leave your browser session.</span>
+              <span className="mt-1 block text-xs text-slate-500">Saved to your ApplyFlow workspace and used to detect skills for matching.</span>
             </label>
             <Button className="w-full" disabled={loading} icon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}>Add resume</Button>
           </form>

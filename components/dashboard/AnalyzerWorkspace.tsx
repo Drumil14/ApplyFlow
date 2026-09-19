@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, FileText, Loader2, ScanSearch, Sparkles } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Plus, ScanSearch, Sparkles } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { useAnalyzeJob } from "@/hooks/use-analysis";
+import { useResumes } from "@/hooks/use-resumes";
+import { AddResumeDialog } from "@/components/dashboard/AddResumeDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { MatchScore } from "@/components/ui/MatchScore";
@@ -12,22 +14,21 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SkillBadge } from "@/components/ui/SkillBadge";
 import { Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import type { AnalysisResult } from "@/types/app";
+import type { AnalysisResult, Resume } from "@/types/app";
 
 const sample =
   "About the role: As a Product Engineer on our Growth Platform team, you will build polished React and TypeScript surfaces used by thousands of teams, own API integrations in Node.js, and partner closely with design, data, and product. You will improve activation funnels, ship accessible UI, instrument experiments, and work with PostgreSQL, observability tooling, feature flags, and modern CI/CD. Strong candidates have shipped full-stack projects, can explain product tradeoffs, and write clearly about impact.";
 
-type ResumeOption = {
-  id: string;
-  title: string;
-  versionTag: string;
-  skills: string[];
-};
-
-export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
+export function AnalyzerWorkspace({ initialResumes }: { initialResumes: Resume[] }) {
+  const { data: resumes = [] } = useResumes(initialResumes);
   const [description, setDescription] = useState("");
-  const [resumeId, setResumeId] = useState(resumes[0]?.id ?? "");
+  const [resumeId, setResumeId] = useState(initialResumes[0]?.id ?? "");
+  const [addOpen, setAddOpen] = useState(false);
   const analyzeJob = useAnalyzeJob();
+
+  // After creating a resume, the query cache already holds it (useCreateResume);
+  // select it so the user can analyze immediately with no refresh.
+  const onResumeCreated = (resume: Resume) => setResumeId(resume.id);
 
   const result: AnalysisResult | null = analyzeJob.data ?? null;
   const loading = analyzeJob.isPending;
@@ -59,9 +60,19 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
         <Card className="p-5">
           <form onSubmit={analyze}>
             <div className="mb-3">
-              <label id="resumeId-label" htmlFor="resumeId" className="mb-2 block text-sm font-medium">
-                Resume version
-              </label>
+              <div className="mb-2 flex items-center justify-between">
+                <label id="resumeId-label" htmlFor="resumeId" className="block text-sm font-medium">
+                  Resume version
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent outline-none transition-colors hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add resume
+                </button>
+              </div>
               {resumes.length ? (
                 <Select
                   id="resumeId"
@@ -70,13 +81,13 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
                   onChange={setResumeId}
                   options={resumes.map((resume) => ({
                     value: resume.id,
-                    label: `${resume.title} · ${resume.versionTag} (${resume.skills.length} skills)`
+                    label: `${resume.title} · ${resume.versionTag} (${resume.skills?.length ?? 0} skills)`
                   }))}
                 />
               ) : (
                 <div className="flex items-center gap-2 rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">
                   <FileText className="h-4 w-4 shrink-0" />
-                  Add a resume version (with pasted text) first so it has skills to match against.
+                  Add a resume version first so it has skills to match against.
                 </div>
               )}
             </div>
@@ -184,6 +195,8 @@ export function AnalyzerWorkspace({ resumes }: { resumes: ResumeOption[] }) {
           )}
         </Card>
       </div>
+
+      <AddResumeDialog open={addOpen} onClose={() => setAddOpen(false)} onCreated={onResumeCreated} />
     </div>
   );
 }

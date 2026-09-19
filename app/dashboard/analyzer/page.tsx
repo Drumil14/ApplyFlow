@@ -1,8 +1,9 @@
 import { AnalysisHistory } from "@/components/dashboard/AnalysisHistory";
 import { AnalyzerWorkspace } from "@/components/dashboard/AnalyzerWorkspace";
 import { prisma } from "@/lib/prisma";
+import { serializeDates } from "@/lib/serializers";
 import { getCurrentUserId } from "@/lib/session";
-import type { AnalysisHistoryItem } from "@/types/app";
+import type { AnalysisHistoryItem, Resume } from "@/types/app";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function AnalyzerPage() {
   const [rows, analysisRows] = await Promise.all([
     prisma.resumeVersion.findMany({
       where: { userId },
-      select: { id: true, title: true, versionTag: true, skills: true },
+      include: { applications: { select: { id: true, company: true, role: true, status: true } } },
       orderBy: { createdAt: "desc" }
     }),
     prisma.jobAnalysis.findMany({
@@ -31,9 +32,10 @@ export default async function AnalyzerPage() {
     })
   ]);
 
-  // `skills` is a JSON column (SQLite has no scalar lists); normalize to string[].
+  // `skills` is a JSON column (no scalar lists); normalize to string[] and
+  // serialize dates so the data is safe to hand to a client component.
   const resumes = rows.map((row) => ({
-    ...row,
+    ...(serializeDates(row) as unknown as Resume),
     skills: (row.skills as string[]) ?? []
   }));
 
@@ -49,7 +51,7 @@ export default async function AnalyzerPage() {
 
   return (
     <div className="space-y-10">
-      <AnalyzerWorkspace resumes={resumes} />
+      <AnalyzerWorkspace initialResumes={resumes} />
       <AnalysisHistory initialAnalyses={analyses} />
     </div>
   );
