@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { CalendarClock, GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useApplications, useUpdateApplication } from "@/hooks/use-applications";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,7 +14,10 @@ import type { Application, Status } from "@/types/app";
 import { statuses, statusLabels } from "@/types/app";
 
 export function KanbanBoard({ initialApplications }: { initialApplications: Application[] }) {
-  const [applications, setApplications] = useState(initialApplications);
+  const { data: applications = [] } = useApplications(initialApplications);
+  const updateApplication = useUpdateApplication();
+  // Announced to screen readers after each move (see the aria-live region below).
+  const [announcement, setAnnouncement] = useState("");
 
   const columns = useMemo(() => {
     return statuses.reduce<Record<Status, Application[]>>((acc, status) => {
@@ -22,39 +26,34 @@ export function KanbanBoard({ initialApplications }: { initialApplications: Appl
     }, {} as Record<Status, Application[]>);
   }, [applications]);
 
-  const onDragEnd = async (result: DropResult) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const id = result.draggableId;
     const nextStatus = result.destination.droppableId as Status;
-    const previous = applications;
     const current = applications.find((app) => app.id === id);
     if (!current || current.status === nextStatus) return;
 
-    setApplications((items) => items.map((app) => (app.id === id ? { ...app, status: nextStatus } : app)));
-    const response = await fetch(`/api/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus })
-    });
-
-    if (!response.ok) {
-      setApplications(previous);
-      toast.error("Status update failed.");
-      return;
-    }
-
-    const data = await response.json().catch(() => null);
-    if (!data?.application) {
-      setApplications(previous);
-      toast.error("The board could not confirm that move.");
-      return;
-    }
-    setApplications((items) => items.map((app) => (app.id === id ? data.application : app)));
-    toast.success(`${current.company} moved to ${statusLabels[nextStatus]}`);
+    // The hook applies the optimistic move to the cache and rolls back on error.
+    updateApplication.mutate(
+      { id, payload: { status: nextStatus }, optimisticStatus: nextStatus },
+      {
+        onSuccess: () => {
+          const message = `${current.company} moved to ${statusLabels[nextStatus]}`;
+          toast.success(message);
+          setAnnouncement(`${message}.`);
+        },
+        onError: () => toast.error("Status update failed — the card was moved back.")
+      }
+    );
   };
 
   return (
     <div className="space-y-6">
+      {/* Polite live region: announces status moves without stealing focus. */}
+      <div aria-live="polite" className="sr-only" role="status">
+        {announcement}
+      </div>
+
       <div>
         <p className="text-sm font-medium text-brand">Kanban</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em]">Application pipeline</h1>
